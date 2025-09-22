@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Header Analyzer</title>
+  <style>
+    body { margin: 0; padding: 10px; background: #000; color: #0f0; font-family: monospace; font-size: 12px; }
+    h1 { font-size: 18px; margin: 10px 0; }
+    h2 { font-size: 14px; margin: 10px 0; color: #ff0; }
+    pre { margin: 5px 0; padding: 5px; border: 1px solid #0f0; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+    a { color: #0ff; margin-right: 10px; }
+    .stats { margin: 10px 0; }
+    .stats span { margin-right: 20px; }
+    #history-data pre { border-color: #666; margin: 2px 0; padding: 2px 5px; }
+  </style>
+</head>
+<body>
+  <h1>HEADER ANALYZER - ALL REQUEST DATA</h1>
+
+  <div>
+    <a href="#current">CURRENT</a>
+    <a href="#stats">STATS</a>
+    <a href="#history">HISTORY</a>
+  </div>
+
+  <h2 id="current">YOUR CURRENT REQUEST</h2>
+  <pre id="current-data">Loading...</pre>
+
+  <h2 id="stats">STATISTICS</h2>
+  <div class="stats">
+    <span>TOTAL: <span id="stat-total">0</span></span>
+    <span>IPs: <span id="stat-ips">0</span></span>
+    <span>BOTS: <span id="stat-bots">0</span></span>
+  </div>
+
+  <h2 id="history">REQUEST HISTORY (NEWEST FIRST)</h2>
+  <div id="history-data"></div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

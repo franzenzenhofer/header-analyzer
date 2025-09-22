@@ -1,0 +1,59 @@
+{
+  "name": "header-analyzer",
+  "version": "1.3.0",
+  "description": "AI Bot Request Header Analyzer - Track and analyze HTTP headers from various AI bots",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:worker\"",
+    "dev:vite": "vite",
+    "dev:worker": "wrangler dev --local",
+    "prebuild": "npm run lint && npm run typecheck",
+    "build": "vite build",
+    "predeploy": "npm run version:bump:minor && npm run build",
+    "deploy": "node scripts/deploy-complete.js",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:coverage && npm run test:e2e",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "typecheck": "tsc --noEmit",
+    "version:bump:patch": "node scripts/version-bump.js patch",
+    "version:bump:minor": "node scripts/version-bump.js minor",
+    "version:bump:major": "node scripts/version-bump.js major"
+  },
+  "keywords": [
+    "cloudflare",
+    "worker",
+    "headers",
+    "analytics",
+    "ai-bots"
+  ],
+  "author": "Franz AI",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250922.0",
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.5.2",
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
+    "@typescript-eslint/parser": "^8.44.1",
+    "@vitejs/plugin-react": "^5.0.3",
+    "@vitest/coverage-v8": "^3.2.4",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.36.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.38.0"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.36.0",
+    "@tailwindcss/postcss": "^4.1.13",
+    "happy-dom": "^18.0.1",
+    "jsdom": "^27.0.0"
+  }
+}

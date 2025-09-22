@@ -1,0 +1,15 @@
+name = "header-analyzer"
+main = "_worker.js"
+compatibility_date = "2025-01-22"
+account_id = "ecf21e85812dfa5b2a35245257fc71f5"
+
+[[routes]]
+pattern = "header-analyzer.franzai.com/*"
+zone_name = "franzai.com"
+
+[env.preview]
+name = "header-analyzer-preview"
+
+[[env.preview.routes]]
+pattern = "header-analyzer-preview.franzai.com/*"
+zone_name = "franzai.com"
