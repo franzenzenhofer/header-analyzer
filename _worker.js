@@ -230,6 +230,19 @@ function searchPage(term) {
 };
 
 function renderFullRequest(req, isCurrent) {
+  // Helper to properly display values including nested objects
+  function displayValue(val) {
+    if (val === null) return 'null';
+    if (val === undefined) return 'undefined';
+    if (typeof val === 'object') {
+      // Pretty print objects with proper indentation
+      return JSON.stringify(val, null, 2).split('\n').map((line, i) =>
+        i === 0 ? line : '  ' + line
+      ).join('\n');
+    }
+    return String(val);
+  }
+
   return `
   <div class="sub">
     <h4>▼ REQUEST INFO</h4>
@@ -318,9 +331,17 @@ function renderFullRequest(req, isCurrent) {
 
     <h4>▼ CLOUDFLARE RAW DATA</h4>
     <div class="sub">
-      ${Object.entries(req.cf).map(([k,v]) =>
-        `<div class="header-item"><span class="key">${k}:</span> <span class="value">${typeof v === 'object' ? JSON.stringify(v) : v}</span></div>`
-      ).join('')}
+      ${Object.entries(req.cf).map(([k,v]) => {
+        const displayVal = displayValue(v);
+        // If it's multiline (contains newlines), format it specially
+        if (displayVal.includes('\n')) {
+          return `<div class="header-item">
+            <span class="key">${k}:</span>
+            <pre style="display: inline-block; margin: 0; color: #fff;">${displayVal}</pre>
+          </div>`;
+        }
+        return `<div class="header-item"><span class="key">${k}:</span> <span class="value">${displayVal}</span></div>`;
+      }).join('')}
     </div>
   </div>
   `;
