@@ -329,7 +329,7 @@ a { color: #0645ad; text-decoration: underline; }
   }
 </div>
 
-${renderJSChecklist()}
+${renderJSChecklist(currentRequest.id)}
 ${renderBotAnalysis(currentRequest)}
 ${renderFullRequest(currentRequest, true)}
 

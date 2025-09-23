@@ -1,5 +1,5 @@
 // JS Feature Detection Live Checklist Renderer (<50 lines)
-export function renderJSChecklist() {
+export function renderJSChecklist(requestId) {
   return `
   <div id="js-checklist" style="border: 2px solid #0645ad; padding: 15px; margin: 20px 0; background: #f8f9fa;">
     <h3 style="color: #000; font-size: 20px; margin: 0 0 10px 0;">⚡ JavaScript Feature Detection - LIVE</h3>
@@ -18,8 +18,15 @@ export function renderJSChecklist() {
   <script type="module">
   import { detectAllFeatures } from '/js-detector.js';
 
-  const reqId = '${crypto.randomUUID()}';
+  const reqId = '${requestId}';
   const features = detectAllFeatures();
+
+  // Save results to server
+  fetch('/api/update-js/' + reqId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(features)
+  }).then(() => console.log('JS features saved'));
 
   // Update UI with results
   const status = document.getElementById('js-status');
