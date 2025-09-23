@@ -5,10 +5,13 @@ Capture and display EVERY piece of HTTP request data with ZERO truncation or hid
 
 ## CORE PRINCIPLES
 1. **NO TRUNCATION** - Show everything, always
-2. **NO JAVASCRIPT** - Pure static HTML generation
-3. **NO PAGINATION** - All 50 requests on main page
+2. **NO JAVASCRIPT** - Pure static HTML generation (except JS feature detection)
+3. **MAX 50 LINES** - NO FILE CAN BE BIGGER THAN 50 LINES!!!
 4. **NO HIDING** - Every byte of data visible
 5. **FULL LINKS** - Everything clickable and inspectable
+6. **DRY CODE** - Super modular, reusable functions
+7. **ATOMIC TESTS** - Write tests first, then code
+8. **HARDCORE LINT** - Zero warnings, strict type checking
 
 ## DEPLOYMENT
 ```bash

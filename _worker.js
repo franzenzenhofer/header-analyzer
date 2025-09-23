@@ -1,7 +1,8 @@
-// Full static HTML with EVERYTHING visible - NO TRUNCATION
-// Now with PERSISTENT KV STORAGE - History survives deployments!
-// Now with PAGINATION for unlimited history!
+// DRY Code - Analysis focused on current request with full JS detection
 import { detectBot, generateBotStats, BOT_DATABASE } from './bot-detector.js';
+import { renderFullRequest, renderBotAnalysis, renderJSAnalysis } from './analysis-renderer.js';
+import { generateHistoryPage } from './history-page.js';
+import { renderJSChecklist } from './js-checklist-renderer.js';
 
 const MAX_HISTORY = 500;  // Store up to 500 requests
 const ITEMS_PER_PAGE = 50;  // Display 50 per page
@@ -13,6 +14,33 @@ export default {
     // Parse page parameter for pagination
     const page = parseInt(url.searchParams.get('page') || '1');
     const validPage = page > 0 ? page : 1;
+
+    // Handle API endpoint for JS data updates
+    if (url.pathname.startsWith('/api/update-js/')) {
+      const requestId = url.pathname.split('/').pop();
+      if (request.method === 'POST') {
+        try {
+          const jsData = await request.json();
+
+          // Store JS data with request ID
+          await env.HEADER_HISTORY.put(`js_${requestId}`, JSON.stringify(jsData), {
+            expirationTtl: 86400 * 7 // 7 days
+          });
+
+          return new Response(JSON.stringify({ success: true, id: requestId }), {
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+    }
 
     // Load history from KV storage
     let requestHistory = [];
@@ -187,10 +215,11 @@ export default {
       });
     }
 
-    // Check if viewing history page with pagination
+    // Check if viewing history page with pagination and filtering
     if (url.pathname === '/history') {
       const historyPage = parseInt(url.searchParams.get('page') || '1');
-      return new Response(generateHistoryPage(requestHistory, historyPage), {
+      const filter = url.searchParams.get('filter') || '';
+      return new Response(generateHistoryPage(requestHistory, historyPage, filter), {
         headers: { 'Content-Type': 'text/html;charset=UTF-8' }
       });
     }
@@ -216,7 +245,18 @@ export default {
     const uniqueIPs = new Set(recentRequests.map(r => r.network.ip));
     const botCount = recentRequests.filter(r => r.bot.isBot).length;
 
-    // Generate main page showing recent 50 only
+    // Load JS data for current request if available
+    let currentJSData = null;
+    try {
+      const jsDataStr = await env.HEADER_HISTORY.get(`js_${currentRequest.id}`);
+      if (jsDataStr) {
+        currentJSData = JSON.parse(jsDataStr);
+      }
+    } catch (e) {
+      console.error('Failed to load JS data:', e);
+    }
+
+    // Generate main page focused on current request
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -225,13 +265,14 @@ export default {
 <title>Header Analyzer - FULL DATA</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; max-width: 100%; overflow-x: hidden; }
-h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; word-wrap: break-word; }
-h2 { color: #000; font-size: 14px; margin: 12px 0 6px 0; border-bottom: 1px solid #aaa; padding-bottom: 3px; }
-h3 { color: #000; font-size: 13px; margin: 8px 0 4px 0; word-wrap: break-word; }
-h4 { color: #000; font-size: 12px; margin: 6px 0 3px 0; font-weight: bold; }
+body { background: #fff; color: #000; font: 14px/1.6 sans-serif; padding: 10px; }
+h1 { color: #000; font-size: 24px; margin: 10px 0; border-bottom: 1px solid #a2a9b1; padding-bottom: 5px; }
+h2 { color: #000; font-size: 20px; margin: 15px 0 8px 0; border-bottom: 1px solid #aaa; padding-bottom: 3px; }
+h3 { color: #000; font-size: 18px; margin: 10px 0 5px 0; word-wrap: break-word; }
+h4 { color: #000; font-size: 16px; margin: 8px 0 4px 0; font-weight: bold; }
 .nav { background: #f8f8f8; padding: 8px; border: 1px solid #ddd; margin: 8px 0; overflow-x: auto; }
-.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; white-space: nowrap; }
+a { color: #0645ad; text-decoration: underline; }
+.nav a { margin-right: 15px; }
 .stats { background: #f0f0f0; margin: 8px 0; padding: 8px; border: 1px solid #ccc; overflow-x: auto; }
 .stats span { display: inline-block; margin-right: 10px; white-space: nowrap; }
 .request-full { margin: 8px 0; padding: 8px; border: 1px solid #ddd; background: #fafafa; overflow: hidden; }
@@ -263,76 +304,53 @@ h4 { color: #000; font-size: 12px; margin: 6px 0 3px 0; font-weight: bold; }
 </head>
 <body>
 
-<h1>HEADER ANALYZER - RECENT 50 - ${requestHistory.length} TOTAL STORED
-<button onclick="copyAllData()" style="float: right; background: #4CAF50; color: white; padding: 5px 10px; border: none; cursor: pointer; font-size: 14px; margin-left: 10px;">COPY ALL</button>
+<h1>HEADER ANALYZER - CURRENT REQUEST ANALYSIS
+<button onclick="copyAllData()" style="float: right; background: #4CAF50; color: white; padding: 5px 10px; border: none; cursor: pointer; font-size: 16px; margin-left: 10px;">COPY</button>
 </h1>
 
 <div class="nav">
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
-<a href="#current">CURRENT</a>
-<a href="#recent">RECENT 50</a>
-<a href="/history" style="color: #f00; font-weight: bold;">ALL HISTORY (${requestHistory.length})</a>
-<a href="/stats">STATS</a>
-<a href="/bots" style="color: #0000ee; font-weight: bold; text-decoration: underline;">BOTS</a>
-<a href="/download" style="color: #0000ee; font-weight: bold; text-decoration: underline;">DOWNLOAD</a>
+<a href="/history" style="color: #0000ee; font-weight: bold; font-size: 16px;">📜 VIEW HISTORY (${requestHistory.length} requests)</a>
+<a href="/bots" style="color: #0000ee; font-weight: bold; font-size: 16px;">🤖 BOTS ONLY</a>
+<a href="/stats" style="font-size: 16px;">📊 STATS</a>
+<a href="/download" style="font-size: 16px;">💾 DOWNLOAD</a>
 </div>
-<input type="text" id="search" placeholder="Search..." onkeyup="searchPage(this.value)" style="margin-top: 5px;">
 </div>
 
-<h2 id="current">YOUR CURRENT REQUEST #${currentRequest.id.substring(0,8)}
-<a href="/request/${currentRequest.id}" style="float: right; color: #0000ee; text-decoration: underline; font-size: 12px;">VIEW DETAIL →</a>
-</h2>
+<h2 style="color: #000;">REQUEST ID: ${currentRequest.id}</h2>
+<div style="display: flex; gap: 10px; margin: 10px 0;">
+  <span style="font-size: 14px; color: #000;">${currentRequest.timestamp}</span>
+  <span style="font-size: 14px; font-weight: bold; color: #000;">${currentRequest.network.ip}</span>
+  ${currentRequest.bot.isBot ?
+    '<span style="background:#fff;color:#000;border:1px solid #000;padding:3px 10px;font-size:14px;">BOT</span>' :
+    currentRequest.bot.suspiciousScore >= 50 ?
+    '<span style="background:#fff;color:#000;border:1px solid #666;padding:3px 10px;font-size:14px;">MAYBE BOT</span>' :
+    '<span style="background:#fff;color:#000;border:1px solid #ccc;padding:3px 10px;font-size:14px;">HUMAN</span>'
+  }
+</div>
+
+${renderJSChecklist()}
+${renderBotAnalysis(currentRequest)}
 ${renderFullRequest(currentRequest, true)}
 
-<h2 id="recent">RECENT 50 REQUESTS (${recentRequests.length} of ${requestHistory.length} total)</h2>
-${recentRequests.map((req, i) => `
-<div class="request-full ${req.bot.isBot ? 'bot' : ''}" id="${req.id}">
-  <h3>
-    #${i + 1} | ${req.timestamp} | ${req.bot.isBot ? '<span style="background:#f00;color:#fff;padding:2px 5px;">BOT</span>' : req.bot.confidence < 30 ? '<span style="background:#ff0;color:#000;padding:2px 5px;">UNSURE</span>' : '<span style="background:#00f;color:#fff;padding:2px 5px;">HUMAN</span>'} | ${req.network.ip}
-    <a href="/request/${req.id}" class="detail-link">VIEW DETAIL</a>
-  </h3>
-  ${renderFullRequest(req, false)}
-</div>
-`).join('')}
+<script>
+// Auto-send JS feature detection data
+if (!localStorage.getItem('js_sent_' + '${currentRequest.id}')) {
+  import('/js-detector.js').then(module => {
+    const jsData = module.detectAllFeatures();
+    fetch('/api/update-js/${currentRequest.id}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jsData)
+    }).then(() => {
+      localStorage.setItem('js_sent_' + '${currentRequest.id}', '1');
+      setTimeout(() => location.reload(), 1000);
+    });
+  });
+}
+</script>
 
 <script>
-function searchPage(term) {
-  if (!term) {
-    // Reset highlighting
-    document.querySelectorAll('.highlight').forEach(el => {
-      const parent = el.parentNode;
-      parent.replaceChild(document.createTextNode(el.textContent), el);
-      parent.normalize();
-    });
-    document.querySelectorAll('.request-full').forEach(el => el.style.display = 'block');
-    return;
-  }
-
-  const regex = new RegExp(term, 'gi');
-  let hasMatches = false;
-
-  // Search and filter all request blocks
-  document.querySelectorAll('.request-full').forEach(block => {
-    const text = block.textContent;
-    if (regex.test(text)) {
-      block.style.display = 'block';
-      hasMatches = true;
-      // Highlight matches in this block
-      block.querySelectorAll('.value, .key, h3, h4').forEach(el => {
-        const html = el.innerHTML;
-        const newHtml = html.replace(regex, match => '<span class="highlight">' + match + '</span>');
-        if (html !== newHtml) el.innerHTML = newHtml;
-      });
-    } else {
-      block.style.display = 'none';
-    }
-  });
-
-  if (!hasMatches) {
-    document.querySelectorAll('.request-full').forEach(el => el.style.display = 'block');
-  }
-}
-
 function copyAllData() {
   const allContent = document.body.innerText;
   navigator.clipboard.writeText(allContent).then(() => {
@@ -345,7 +363,6 @@ function copyAllData() {
       btn.style.background = '#4CAF50';
     }, 2000);
   }).catch(err => {
-    // Fallback for older browsers
     const textArea = document.createElement('textarea');
     textArea.value = allContent;
     document.body.appendChild(textArea);
@@ -356,7 +373,7 @@ function copyAllData() {
     btn.innerText = 'COPIED!';
     btn.style.background = '#666';
     setTimeout(() => {
-      btn.innerText = 'COPY ALL';
+      btn.innerText = 'COPY';
       btn.style.background = '#4CAF50';
     }, 2000);
   });
@@ -374,124 +391,6 @@ function copyAllData() {
     });
   }
 };
-
-function renderFullRequest(req, isCurrent) {
-  // Helper to properly display values including nested objects
-  function displayValue(val) {
-    if (val === null) return 'null';
-    if (val === undefined) return 'undefined';
-    if (typeof val === 'object') {
-      // Pretty print objects with proper indentation
-      return JSON.stringify(val, null, 2).split('\n').map((line, i) =>
-        i === 0 ? line : '  ' + line
-      ).join('\n');
-    }
-    return String(val);
-  }
-
-  return `
-  <div class="sub">
-    <h4>REQUEST INFO</h4>
-    <div class="sub">
-      <div><span class="key">ID:</span> <span class="value">${req.id}</span></div>
-      <div><span class="key">TIMESTAMP:</span> <span class="value">${req.timestamp}</span></div>
-      <div><span class="key">TIMESTAMP MS:</span> <span class="value">${req.timestampMs}</span></div>
-      <div><span class="key">METHOD:</span> <span class="value">${req.request.method}</span></div>
-      <div><span class="key">URL:</span> <span class="value">${req.request.url}</span></div>
-      <div><span class="key">PATH:</span> <span class="value">${req.request.path}</span></div>
-      <div><span class="key">SEARCH:</span> <span class="value">${req.request.search || 'none'}</span></div>
-      <div><span class="key">HASH:</span> <span class="value">${req.request.hash || 'none'}</span></div>
-      <div><span class="key">HOST:</span> <span class="value">${req.request.host}</span></div>
-      <div><span class="key">HOSTNAME:</span> <span class="value">${req.request.hostname}</span></div>
-      <div><span class="key">PORT:</span> <span class="value">${req.request.port}</span></div>
-      <div><span class="key">PROTOCOL:</span> <span class="value">${req.request.protocol}</span></div>
-    </div>
-
-    <h4>ALL HEADERS (${req.headerCount})</h4>
-    <div class="sub">
-      ${Object.entries(req.headers).map(([k,v]) =>
-        `<div class="header-item"><span class="key">${k}:</span> <span class="value">${v}</span></div>`
-      ).join('')}
-    </div>
-
-    <h4>COOKIES (${req.cookieCount})</h4>
-    <div class="sub">
-      ${req.cookieCount > 0 ? Object.entries(req.cookies).map(([k,v]) =>
-        `<div class="cookie-item"><span class="key">${k}:</span> <span class="value">${v}</span></div>`
-      ).join('') : '<div>No cookies</div>'}
-    </div>
-
-    <h4>QUERY PARAMETERS (${req.queryCount})</h4>
-    <div class="sub">
-      ${req.queryCount > 0 ? Object.entries(req.query).map(([k,v]) =>
-        `<div class="query-item"><span class="key">${k}:</span> <span class="value">${v}</span></div>`
-      ).join('') : '<div>No query parameters</div>'}
-    </div>
-
-    <h4>NETWORK</h4>
-    <div class="sub">
-      <div><span class="key">IP:</span> <span class="value">${req.network.ip}</span></div>
-      <div><span class="key">CONNECTING IP:</span> <span class="value">${req.network.ips.connecting || 'none'}</span></div>
-      <div><span class="key">FORWARDED IP:</span> <span class="value">${req.network.ips.forwarded || 'none'}</span></div>
-      <div><span class="key">REAL IP:</span> <span class="value">${req.network.ips.real || 'none'}</span></div>
-      <div><span class="key">PROXY IP:</span> <span class="value">${req.network.ips.proxy || 'none'}</span></div>
-      <div><span class="key">HTTP VERSION:</span> <span class="value">${req.network.protocol || 'unknown'}</span></div>
-      <div><span class="key">TLS VERSION:</span> <span class="value">${req.network.tlsVersion || 'unknown'}</span></div>
-      <div><span class="key">TLS CIPHER:</span> <span class="value">${req.network.tlsCipher || 'unknown'}</span></div>
-      <div><span class="key">TCP RTT:</span> <span class="value">${req.network.tcpRtt || 'unknown'}</span></div>
-    </div>
-
-    <h4>LOCATION</h4>
-    <div class="sub">
-      <div><span class="key">COUNTRY:</span> <span class="value">${req.geo.country || 'unknown'}</span></div>
-      <div><span class="key">COUNTRY NAME:</span> <span class="value">${req.geo.countryName || 'unknown'}</span></div>
-      <div><span class="key">CITY:</span> <span class="value">${req.geo.city || 'unknown'}</span></div>
-      <div><span class="key">REGION:</span> <span class="value">${req.geo.region || 'unknown'}</span></div>
-      <div><span class="key">REGION CODE:</span> <span class="value">${req.geo.regionCode || 'unknown'}</span></div>
-      <div><span class="key">CONTINENT:</span> <span class="value">${req.geo.continent || 'unknown'}</span></div>
-      <div><span class="key">TIMEZONE:</span> <span class="value">${req.geo.timezone || 'unknown'}</span></div>
-      <div><span class="key">LAT/LONG:</span> <span class="value">${req.geo.latitude || '?'},${req.geo.longitude || '?'}</span></div>
-      <div><span class="key">POSTAL CODE:</span> <span class="value">${req.geo.postalCode || 'unknown'}</span></div>
-      <div><span class="key">METRO CODE:</span> <span class="value">${req.geo.metroCode || 'unknown'}</span></div>
-      <div><span class="key">COLO:</span> <span class="value">${req.geo.colo || 'unknown'}</span></div>
-      <div><span class="key">ASN:</span> <span class="value">${req.geo.asn || 'unknown'}</span></div>
-      <div><span class="key">AS ORG:</span> <span class="value">${req.geo.asOrganization || 'unknown'}</span></div>
-    </div>
-
-    <h4>BOT DETECTION</h4>
-    <div class="sub">
-      <div><span class="key">IS BOT:</span> <span class="value">${req.bot.isBot ? 'YES' : 'NO'}</span></div>
-      <div><span class="key">TYPE:</span> <span class="value">${req.bot.type}</span></div>
-      <div><span class="key">USER AGENT:</span> <span class="value">${req.bot.userAgent}</span></div>
-    </div>
-
-    <h4>SECURITY</h4>
-    <div class="sub">
-      <div><span class="key">REFERER:</span> <span class="value">${req.security.referer || 'none'}</span></div>
-      <div><span class="key">ORIGIN:</span> <span class="value">${req.security.origin || 'none'}</span></div>
-      <div><span class="key">SEC-FETCH-SITE:</span> <span class="value">${req.security.secFetchSite || 'none'}</span></div>
-      <div><span class="key">SEC-FETCH-MODE:</span> <span class="value">${req.security.secFetchMode || 'none'}</span></div>
-      <div><span class="key">SEC-FETCH-USER:</span> <span class="value">${req.security.secFetchUser || 'none'}</span></div>
-      <div><span class="key">SEC-FETCH-DEST:</span> <span class="value">${req.security.secFetchDest || 'none'}</span></div>
-    </div>
-
-    <h4>CLOUDFLARE RAW DATA</h4>
-    <div class="sub">
-      ${Object.entries(req.cf).map(([k,v]) => {
-        const displayVal = displayValue(v);
-        // If it's multiline (contains newlines), format it specially
-        if (displayVal.includes('\n')) {
-          return `<div class="header-item">
-            <span class="key">${k}:</span>
-            <pre style="display: inline-block; margin: 0; color: #000;">${displayVal}</pre>
-          </div>`;
-        }
-        return `<div class="header-item"><span class="key">${k}:</span> <span class="value">${displayVal}</span></div>`;
-      }).join('')}
-    </div>
-  </div>
-  `;
-}
 
 function generateAnalysis(req) {
   const ua = req.headers['user-agent'] || '';
@@ -1335,10 +1234,11 @@ function generateDetailPage(req) {
 <title>Request ${req.id}</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; max-width: 100%; overflow-x: hidden; }
-h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; word-wrap: break-word; }
+body { background: #fff; color: #000; font: 14px/1.6 sans-serif; padding: 10px; }
+h1 { color: #000; font-size: 24px; margin: 10px 0; border-bottom: 1px solid #a2a9b1; padding-bottom: 5px; }
 .nav { padding: 8px; border: 1px solid #ddd; margin: 8px 0; background: #f8f8f8; overflow-x: auto; }
-.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; white-space: nowrap; }
+a { color: #0645ad; text-decoration: underline; }
+.nav a { margin-right: 15px; }
 pre { background: #f8f8f8; border: 1px solid #ddd; padding: 8px; overflow: auto; color: #000; max-width: 100%; }
 .key { color: #000; display: inline-block; min-width: 100px; font-weight: bold; vertical-align: top; }
 .value { color: #000; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; display: inline-block; max-width: calc(100% - 110px); }
@@ -1471,11 +1371,12 @@ function generateStatsPage(requestHistory) {
 <title>Header Analyzer - Statistics</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; max-width: 100%; overflow-x: hidden; }
-h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; word-wrap: break-word; }
+body { background: #fff; color: #000; font: 14px/1.6 sans-serif; padding: 10px; }
+h1 { color: #000; font-size: 24px; margin: 10px 0; border-bottom: 1px solid #a2a9b1; padding-bottom: 5px; }
 h2 { color: #000; font-size: 14px; margin: 12px 0 8px 0; border-bottom: 1px solid #aaa; }
 .nav { padding: 8px; border: 1px solid #ddd; margin: 8px 0; background: #f8f8f8; overflow-x: auto; }
-.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; white-space: nowrap; }
+a { color: #0645ad; text-decoration: underline; }
+.nav a { margin-right: 15px; }
 .stats-box { border: 1px solid #ddd; padding: 8px; margin: 8px 0; background: #f8f8f8; overflow: hidden; }
 .stat-line { margin: 2px 0; }
 .key { color: #000; display: inline-block; min-width: 100px; font-weight: bold; }
@@ -1588,97 +1489,6 @@ Generated: ${new Date().toISOString()} | ${total} requests analyzed
 </html>`;
 }
 
-function generateHistoryPage(requestHistory, page = 1) {
-  const totalRequests = requestHistory.length;
-  const totalPages = Math.ceil(totalRequests / ITEMS_PER_PAGE);
-  const currentPage = Math.min(Math.max(1, page), totalPages || 1);
-
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const pageRequests = requestHistory.slice(startIndex, endIndex);
-
-  // Generate pagination controls
-  const paginationHTML = totalPages > 1 ? `
-  <div class="pagination" style="margin: 10px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; text-align: center;">
-    ${currentPage > 1 ? `<a href="/history?page=${currentPage - 1}" rel="prev" style="padding: 5px 10px; margin: 0 5px; background: #fff; border: 1px solid #000; text-decoration: none;">← PREV</a>` : ''}
-    <span style="margin: 0 10px;">Page ${currentPage} of ${totalPages} (${totalRequests} total requests)</span>
-    ${currentPage < totalPages ? `<a href="/history?page=${currentPage + 1}" rel="next" style="padding: 5px 10px; margin: 0 5px; background: #fff; border: 1px solid #000; text-decoration: none;">NEXT →</a>` : ''}
-    <div style="margin-top: 10px;">
-      ${Array.from({length: Math.min(10, totalPages)}, (_, i) => {
-        const pageNum = i + 1;
-        if (pageNum === currentPage) {
-          return `<span style="padding: 5px 10px; margin: 2px; background: #000; color: #fff;">${pageNum}</span>`;
-        } else {
-          return `<a href="/history?page=${pageNum}" style="padding: 5px 10px; margin: 2px; background: #fff; border: 1px solid #000; text-decoration: none;">${pageNum}</a>`;
-        }
-      }).join('')}
-      ${totalPages > 10 ? `<span style="margin: 0 5px;">...</span><a href="/history?page=${totalPages}" style="padding: 5px 10px; margin: 2px; background: #fff; border: 1px solid #000; text-decoration: none;">${totalPages}</a>` : ''}
-    </div>
-  </div>` : '';
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Full History - Page ${currentPage} - Header Analyzer</title>
-${currentPage > 1 ? `<link rel="prev" href="/history?page=${currentPage - 1}">` : ''}
-${currentPage < totalPages ? `<link rel="next" href="/history?page=${currentPage + 1}">` : ''}
-<link rel="canonical" href="https://header-analyzer.franzai.com/history${currentPage > 1 ? `?page=${currentPage}` : ''}">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; }
-h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; }
-h2 { color: #000; font-size: 14px; margin: 12px 0 6px 0; border-bottom: 1px solid #aaa; }
-.nav { background: #f8f8f8; padding: 8px; border: 1px solid #ddd; margin: 8px 0; }
-.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; }
-.request-full { margin: 8px 0; padding: 8px; border: 1px solid #ddd; background: #fafafa; }
-.request-full.bot { border-color: #000; background: #fff0f0; }
-.key { color: #000; display: inline-block; min-width: 100px; font-weight: bold; }
-.value { color: #000; word-wrap: break-word; }
-</style>
-</head>
-<body>
-
-<h1>COMPLETE HISTORY - PAGE ${currentPage} OF ${totalPages}</h1>
-
-<div class="nav">
-<a href="/">← BACK TO MAIN</a>
-<a href="/stats">STATISTICS</a>
-<a href="/bots">BOTS ONLY</a>
-<a href="/download">DOWNLOAD ALL</a>
-</div>
-
-${paginationHTML}
-
-<h2>SHOWING REQUESTS ${startIndex + 1} to ${Math.min(endIndex, totalRequests)} of ${totalRequests}</h2>
-
-${pageRequests.map((req, i) => `
-<div class="request-full ${req.bot.isBot || req.bot.probableBot ? 'bot' : ''}" id="${req.id}">
-  <h3>
-    #${startIndex + i + 1} | ${req.timestamp} | ${req.bot.isBot || req.bot.probableBot ? '<span style="background:#f00;color:#fff;padding:2px 5px;">BOT</span>' : '<span style="background:#0f0;color:#fff;padding:2px 5px;">HUMAN</span>'} | ${req.network.ip}
-    <a href="/request/${req.id}" style="float: right; color: #0000ee; text-decoration: underline;">VIEW DETAIL →</a>
-  </h3>
-  <div style="margin: 5px 0;">
-    <span class="key">USER AGENT:</span> <span class="value">${req.bot.userAgent}</span>
-  </div>
-  <div style="margin: 5px 0;">
-    <span class="key">LOCATION:</span> <span class="value">${req.geo.city || 'Unknown'}, ${req.geo.country || 'Unknown'}</span>
-  </div>
-  ${req.bot.operator ? `<div style="margin: 5px 0;">
-    <span class="key">BOT OPERATOR:</span> <span class="value">${req.bot.operator}</span>
-  </div>` : ''}
-  ${req.bot.aiMode ? `<div style="margin: 5px 0; background: #ff0; padding: 2px;">
-    <span class="key">AI MODE:</span> <span class="value" style="font-weight: bold;">${req.bot.aiMode}</span>
-  </div>` : ''}
-</div>
-`).join('')}
-
-${paginationHTML}
-
-</body>
-</html>`;
-}
 
 function generateBotsPage(requestHistory, page = 1) {
   // Get all bot requests (including probable bots)
@@ -1991,11 +1801,12 @@ function generateDownloadPage(requestHistory, currentRequest) {
 <title>Download Data - Header Analyzer</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; max-width: 100%; overflow-x: hidden; }
-h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; word-wrap: break-word; }
+body { background: #fff; color: #000; font: 14px/1.6 sans-serif; padding: 10px; }
+h1 { color: #000; font-size: 24px; margin: 10px 0; border-bottom: 1px solid #a2a9b1; padding-bottom: 5px; }
 h2 { color: #000; font-size: 14px; margin: 12px 0 8px 0; border-bottom: 1px solid #aaa; }
 .nav { padding: 8px; border: 1px solid #ddd; margin: 8px 0; background: #f8f8f8; overflow-x: auto; }
-.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; white-space: nowrap; }
+a { color: #0645ad; text-decoration: underline; }
+.nav a { margin-right: 15px; }
 .download-box { border: 2px solid #000; padding: 15px; margin: 15px 0; background: #f8f8f8; }
 .download-btn { background: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; font-size: 16px; margin: 10px 5px; }
 .download-btn:hover { background: #45a049; }
