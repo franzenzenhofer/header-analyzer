@@ -1,0 +1,47 @@
+// HARDCORE LINT - ZERO TOLERANCE (<50 lines)
+export default {
+  rules: {
+    'max-lines': ['error', { max: 50, skipBlankLines: false }],
+    'max-lines-per-function': ['error', { max: 20 }],
+    'max-statements': ['error', 10],
+    'max-depth': ['error', 2],
+    'max-nested-callbacks': ['error', 2],
+    'complexity': ['error', 5],
+    'max-params': ['error', 3],
+    'no-console': 'error',
+    'no-debugger': 'error',
+    'no-alert': 'error',
+    'no-var': 'error',
+    'prefer-const': 'error',
+    'no-unused-vars': 'error',
+    'no-undef': 'error',
+    'no-redeclare': 'error',
+    'no-shadow': 'error',
+    'no-duplicate-imports': 'error',
+    'no-eval': 'error',
+    'no-implied-eval': 'error',
+    'no-new-func': 'error',
+    'no-with': 'error',
+    'strict': ['error', 'global'],
+    'eqeqeq': ['error', 'always'],
+    'curly': ['error', 'all'],
+    'brace-style': ['error', '1tbs'],
+    'indent': ['error', 2],
+    'quotes': ['error', 'single'],
+    'semi': ['error', 'always'],
+    'no-trailing-spaces': 'error',
+    'comma-dangle': ['error', 'never'],
+    'no-multiple-empty-lines': ['error', { max: 1 }],
+    'arrow-body-style': ['error', 'as-needed'],
+    'prefer-arrow-callback': 'error',
+    'prefer-template': 'error',
+    'no-useless-concat': 'error',
+    'no-magic-numbers': ['error', { ignore: [0, 1, -1] }],
+    'no-inline-comments': 'error',
+    'no-warning-comments': 'error'
+  },
+  parserOptions: {
+    ecmaVersion: 2024,
+    sourceType: 'module'
+  }
+};
