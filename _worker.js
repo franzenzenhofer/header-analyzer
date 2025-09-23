@@ -1,5 +1,7 @@
 // Full static HTML with EVERYTHING visible - NO TRUNCATION
 // Now with PERSISTENT KV STORAGE - History survives deployments!
+import { detectBot, generateBotStats, BOT_DATABASE } from './bot-detector.js';
+
 const MAX_HISTORY = 50;
 
 export default {
@@ -27,7 +29,9 @@ export default {
 
       const cf = request.cf || {};
       const userAgent = headers['user-agent'] || '';
-      const isBot = /bot|crawler|spider|scraper|curl|wget|postman|anthropic|claude|ClaudeBot|claude-web|anthropic-ai|openai|gpt|GPTBot|ChatGPT-User|OAI-SearchBot|gemini|Google-Extended|Gemini-Ai|Gemini-Deep-Research|perplexity|PerplexityBot|Perplexity-User|MistralAI-User|bard|BingBot|facebook|twitter|slack|linkedin|whatsapp|telegram|discord|python|ruby|java|go|lighthouse|gtmetrix|pingdom|uptimerobot|statuscake|semrush|ahrefs|moz|majestic|dotbot|seznambot|yandex|baidu|duckduck|archive\.org|facebookexternalhit|twitterbot|slackbot|linkedinbot|whatsappbot|telegrambot|discordbot/i.test(userAgent);
+
+      // Use advanced bot detection
+      const botDetection = detectBot(request, headers, cf);
 
       // Parse cookies
       const cookies = {};
@@ -103,62 +107,17 @@ export default {
         },
 
         bot: {
-          isBot: isBot,
+          isBot: botDetection.isBot || botDetection.probableBot,
           userAgent: userAgent,
-          type: isBot ? (() => {
-            // AI Bots
-            if (/GPTBot/i.test(userAgent)) return 'OpenAI GPTBot (Training)';
-            if (/ChatGPT-User/i.test(userAgent)) return 'ChatGPT Browser';
-            if (/OAI-SearchBot/i.test(userAgent)) return 'OpenAI SearchBot';
-            if (/ClaudeBot/i.test(userAgent)) return 'Claude Bot (Citations)';
-            if (/claude-web/i.test(userAgent)) return 'Claude Web Crawler';
-            if (/anthropic-ai/i.test(userAgent)) return 'Anthropic AI (Training)';
-            if (/anthropic|claude/i.test(userAgent)) return 'Anthropic/Claude';
-            if (/Google-Extended/i.test(userAgent)) return 'Google Gemini';
-            if (/Gemini-Ai/i.test(userAgent)) return 'Gemini AI';
-            if (/Gemini-Deep-Research/i.test(userAgent)) return 'Gemini Deep Research';
-            if (/gemini/i.test(userAgent)) return 'Google Gemini';
-            if (/PerplexityBot/i.test(userAgent)) return 'Perplexity Index Bot';
-            if (/Perplexity-User/i.test(userAgent)) return 'Perplexity User';
-            if (/MistralAI-User/i.test(userAgent)) return 'Mistral AI';
-            if (/bard/i.test(userAgent)) return 'Google Bard';
-            // Search Engine Bots
-            if (/googlebot/i.test(userAgent)) return 'Googlebot';
-            if (/bingbot/i.test(userAgent)) return 'BingBot';
-            if (/yandex/i.test(userAgent)) return 'YandexBot';
-            if (/baidu/i.test(userAgent)) return 'BaiduBot';
-            if (/duckduck/i.test(userAgent)) return 'DuckDuckBot';
-            // Social Media Bots
-            if (/facebookexternalhit/i.test(userAgent)) return 'Facebook';
-            if (/twitterbot/i.test(userAgent)) return 'Twitter/X';
-            if (/slackbot/i.test(userAgent)) return 'Slack';
-            if (/linkedinbot/i.test(userAgent)) return 'LinkedIn';
-            if (/whatsappbot|whatsapp/i.test(userAgent)) return 'WhatsApp';
-            if (/telegrambot|telegram/i.test(userAgent)) return 'Telegram';
-            if (/discordbot|discord/i.test(userAgent)) return 'Discord';
-            // Tools & Crawlers
-            if (/curl/i.test(userAgent)) return 'curl';
-            if (/wget/i.test(userAgent)) return 'wget';
-            if (/postman/i.test(userAgent)) return 'Postman';
-            if (/python/i.test(userAgent)) return 'Python';
-            if (/ruby/i.test(userAgent)) return 'Ruby';
-            if (/java/i.test(userAgent)) return 'Java';
-            if (/go-http/i.test(userAgent)) return 'Go';
-            // SEO Bots
-            if (/semrush/i.test(userAgent)) return 'SEMrush';
-            if (/ahrefs/i.test(userAgent)) return 'Ahrefs';
-            if (/moz/i.test(userAgent)) return 'Moz';
-            if (/majestic/i.test(userAgent)) return 'Majestic';
-            // Monitoring
-            if (/lighthouse/i.test(userAgent)) return 'Google Lighthouse';
-            if (/gtmetrix/i.test(userAgent)) return 'GTmetrix';
-            if (/pingdom/i.test(userAgent)) return 'Pingdom';
-            if (/uptimerobot/i.test(userAgent)) return 'UptimeRobot';
-            if (/statuscake/i.test(userAgent)) return 'StatusCake';
-            // Generic
-            if (/bot|crawler|spider/i.test(userAgent)) return 'Generic Bot';
-            return 'Unknown Bot';
-          })() : 'Human'
+          type: botDetection.botName || 'Unknown',
+          operator: botDetection.operator,
+          category: botDetection.category,
+          purpose: botDetection.purpose,
+          confidence: botDetection.confidence,
+          suspiciousScore: botDetection.suspiciousScore,
+          suspiciousReasons: botDetection.suspiciousReasons,
+          probableBot: botDetection.probableBot,
+          detectionMethod: botDetection.detectionMethod
         },
 
         security: {
@@ -1489,93 +1448,155 @@ Generated: ${new Date().toISOString()} | ${total} requests analyzed
 }
 
 function generateBotsPage(requestHistory) {
-  // Filter only bot requests
-  const botRequests = requestHistory.filter(r => r.bot.isBot);
+  // Get all bot requests (including probable bots)
+  const botRequests = requestHistory.filter(r => r.bot.isBot || r.bot.probableBot);
+  const suspiciousBots = requestHistory.filter(r => r.bot.suspiciousScore >= 30 && !r.bot.isBot);
+  const hiddenBots = requestHistory.filter(r => r.bot.probableBot && !r.bot.isBot);
+
   const total = botRequests.length;
   const uniqueIPs = new Set(botRequests.map(r => r.network.ip));
 
-  // Bot type distribution
-  const botTypes = {};
-  botRequests.forEach(r => {
-    botTypes[r.bot.type] = (botTypes[r.bot.type] || 0) + 1;
-  });
+  // Get statistics
+  const stats = generateBotStats(requestHistory);
+
+  // Categorize bots
+  const categorizedBots = {
+    'AI Bots': botRequests.filter(r => r.bot.category === 'AI'),
+    'Search Engines': botRequests.filter(r => r.bot.category === 'Search' || r.bot.category === 'Search/AI'),
+    'Social Media': botRequests.filter(r => r.bot.category === 'Social'),
+    'SEO Tools': botRequests.filter(r => r.bot.category === 'SEO'),
+    'Monitoring': botRequests.filter(r => r.bot.category === 'Monitoring'),
+    'Developer Tools': botRequests.filter(r => r.bot.category === 'Developer'),
+    'Suspicious/Hidden': [...hiddenBots, ...suspiciousBots]
+  };
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Header Analyzer - BOTS ONLY</title>
+<title>Bot Detection Specialist - Advanced Analysis</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; max-width: 100%; overflow-x: hidden; }
-h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; word-wrap: break-word; }
-h2 { color: #000; font-size: 14px; margin: 12px 0 6px 0; border-bottom: 1px solid #aaa; padding-bottom: 3px; }
-h3 { color: #000; font-size: 13px; margin: 8px 0 4px 0; word-wrap: break-word; }
-h4 { color: #000; font-size: 12px; margin: 6px 0 3px 0; font-weight: bold; }
-.nav { background: #f8f8f8; padding: 8px; border: 1px solid #ddd; margin: 8px 0; overflow-x: auto; }
-.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; white-space: nowrap; }
-.stats { background: #fff0f0; margin: 8px 0; padding: 8px; border: 1px solid #000; overflow-x: auto; }
-.stats span { display: inline-block; margin-right: 10px; white-space: nowrap; }
-.request-full { margin: 8px 0; padding: 8px; border: 1px solid #000; background: #fff0f0; overflow: hidden; }
-.request-full.current { border-color: #000; background: #f0f0f0; }
-.key { color: #000; display: inline-block; min-width: 100px; font-weight: bold; vertical-align: top; }
-.value { color: #000; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; display: inline-block; max-width: calc(100% - 110px); }
-.sub { margin-left: 8px; padding-left: 8px; border-left: 1px solid #ddd; overflow: hidden; }
-.header-item, .cookie-item, .query-item { margin: 2px 0; font-size: 12px; overflow: hidden; }
-.detail-link { color: #0000ee; text-decoration: underline; float: right; margin-left: 8px; }
-.detail-link:hover { color: #551a8b; text-decoration: underline; }
-#search { padding: 4px; background: #fff; border: 1px solid #999; color: #000; width: 100%; max-width: 250px; font-size: 16px; }
-.highlight { background: #ff0; }
-.bot-type { display: inline-block; padding: 2px 5px; margin: 2px; background: #fff0f0; border: 1px solid #000; color: #000; white-space: nowrap; }
-@media (max-width: 600px) {
-  body { padding: 3px; font-size: 11px; }
-  h1 { font-size: 16px; margin: 5px 0; }
-  h2 { font-size: 13px; margin: 8px 0 4px 0; }
-  h3 { font-size: 12px; }
-  .nav { padding: 5px; }
-  .nav a { margin-right: 8px; font-size: 11px; }
-  .request-full { padding: 5px; margin: 5px 0; }
-  .stats { padding: 5px; margin: 5px 0; }
-  .key { min-width: 80px; font-size: 11px; }
-  .value { max-width: calc(100% - 85px); font-size: 11px; }
-  .sub { margin-left: 5px; padding-left: 5px; }
-  #search { max-width: 150px; font-size: 16px; }
-  .bot-type { font-size: 10px; padding: 1px 3px; margin: 1px; }
-}
+body { background: #000; color: #0f0; font: 11px/1.3 monospace; padding: 5px; }
+h1 { color: #0f0; font-size: 16px; margin: 5px 0; border-bottom: 2px solid #0f0; padding-bottom: 3px; }
+h2 { color: #0f0; font-size: 13px; margin: 8px 0 4px 0; border-bottom: 1px solid #0f0; }
+h3 { color: #0f0; font-size: 12px; margin: 5px 0 3px 0; }
+.nav { background: #111; padding: 5px; border: 1px solid #0f0; margin: 5px 0; }
+.nav a, .filter-btn { color: #0ff; margin-right: 8px; text-decoration: underline; cursor: pointer; background: none; border: none; font: inherit; }
+.nav a:hover, .filter-btn:hover { color: #fff; }
+.stats { background: #111; margin: 5px 0; padding: 5px; border: 1px solid #0f0; }
+.stats span { display: inline-block; margin-right: 10px; color: #0f0; }
+.filters { background: #111; padding: 5px; border: 1px solid #0f0; margin: 5px 0; }
+.filter-group { margin: 5px 0; }
+.filter-group label { color: #0ff; margin-right: 5px; }
+.request-full { margin: 5px 0; padding: 5px; border: 1px solid #0f0; background: #111; }
+.request-full.bot-confirmed { border-color: #f00; background: #200; }
+.request-full.bot-suspicious { border-color: #ff0; background: #220; }
+.request-full.bot-hidden { border-color: #f0f; background: #202; }
+.key { color: #0ff; display: inline-block; min-width: 100px; font-weight: bold; }
+.value { color: #fff; }
+.sub { margin-left: 10px; padding-left: 10px; border-left: 1px solid #0f0; }
+.bot-badge { display: inline-block; padding: 2px 5px; margin: 2px; border: 1px solid; }
+.bot-badge.ai { background: #400; border-color: #f00; color: #fff; }
+.bot-badge.search { background: #040; border-color: #0f0; color: #fff; }
+.bot-badge.social { background: #004; border-color: #00f; color: #fff; }
+.bot-badge.seo { background: #440; border-color: #ff0; color: #fff; }
+.bot-badge.suspicious { background: #f0f; border-color: #fff; color: #000; }
+.bot-badge.hidden { background: #f00; border-color: #fff; color: #fff; animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+.confidence-meter { display: inline-block; width: 100px; height: 10px; background: #222; border: 1px solid #0f0; }
+.confidence-fill { height: 100%; background: linear-gradient(90deg, #f00, #ff0, #0f0); }
+.suspicious-reasons { background: #200; border: 1px solid #f00; padding: 3px; margin: 3px 0; color: #ff0; font-size: 10px; }
+#search { padding: 4px; background: #000; border: 1px solid #0f0; color: #0f0; width: 200px; }
+.highlight { background: #ff0; color: #000; }
 </style>
 </head>
 <body>
 
-<h1>BOT TRAFFIC ONLY - ${total} BOT REQUESTS
-<button onclick="copyAllBots()" style="float: right; background: #4CAF50; color: white; padding: 5px 10px; border: none; cursor: pointer; font-size: 14px; margin-left: 10px;">COPY ALL</button>
+<h1>🤖 BOT DETECTION SPECIALIST ANALYSIS - ${total} BOTS DETECTED (${hiddenBots.length} HIDDEN)
 </h1>
 
 <div class="nav">
-<a href="/">← BACK TO ALL</a>
-<a href="/stats">STATISTICS</a>
-<input type="text" id="search" placeholder="Search in bots..." onkeyup="searchPage(this.value)">
+<a href="/">← MAIN</a>
+<button class="filter-btn" onclick="filterBots('all')">ALL BOTS</button>
+<button class="filter-btn" onclick="filterBots('ai')">AI BOTS</button>
+<button class="filter-btn" onclick="filterBots('search')">SEARCH</button>
+<button class="filter-btn" onclick="filterBots('social')">SOCIAL</button>
+<button class="filter-btn" onclick="filterBots('seo')">SEO</button>
+<button class="filter-btn" onclick="filterBots('suspicious')">SUSPICIOUS</button>
+<button class="filter-btn" onclick="filterBots('hidden')">HIDDEN</button>
+<input type="text" id="search" placeholder="Search..." onkeyup="searchPage(this.value)">
 </div>
 
-<h2>BOT STATISTICS AND REQUESTS (${total} BOTS)</h2>
 <div class="stats">
-<span>TOTAL BOTS: ${total}</span>
-<span>UNIQUE BOT IPs: ${uniqueIPs.size}</span>
-${Object.entries(botTypes).map(([type, count]) =>
-  `<span class="bot-type">${type}: ${count}</span>`
+<span>TOTAL: ${total}</span>
+<span>CONFIRMED: ${botRequests.filter(r => r.bot.isBot && !r.bot.probableBot).length}</span>
+<span>HIDDEN: ${hiddenBots.length}</span>
+<span>SUSPICIOUS: ${suspiciousBots.length}</span>
+<span>IPs: ${uniqueIPs.size}</span>
+</div>
+
+<h2>BY OPERATOR</h2>
+<div class="stats">
+${Object.entries(stats.byOperator || {}).map(([op, count]) =>
+  `<span class="bot-badge">${op}: ${count}</span>`
+).join('') || '<span>No operators detected</span>'}
+</div>
+
+<h2>BY CATEGORY</h2>
+<div class="stats">
+${Object.entries(categorizedBots).map(([category, bots]) =>
+  `<span class="bot-badge ${category.toLowerCase().replace(/[\s\/]/g, '-')}">${category}: ${bots.length}</span>`
 ).join('')}
 </div>
 
-${total === 0 ? '<div style="padding: 20px; color: #000;">No bot requests yet</div>' :
-  botRequests.map((req, i) => `
-<div class="request-full" id="${req.id}">
+<h2>BOT REQUESTS</h2>
+${total === 0 ? '<div style="padding: 20px; color: #0f0;">No bot requests yet. Waiting for bots...</div>' :
+  botRequests.map((req, i) => {
+    const botClass = req.bot.probableBot && !req.bot.isBot ? 'bot-hidden' :
+                     req.bot.suspiciousScore >= 50 ? 'bot-suspicious' :
+                     req.bot.isBot ? 'bot-confirmed' : '';
+
+    return `
+<div class="request-full ${botClass}" id="${req.id}" data-category="${req.bot.category || 'unknown'}" data-operator="${req.bot.operator || 'unknown'}">
   <h3>
-    #${i + 1} | ${req.timestamp} | BOT: ${req.bot.type} | ${req.network.ip}
-    <a href="/request/${req.id}" class="detail-link">VIEW DETAIL</a>
+    #${i + 1} | ${req.timestamp}
+    ${req.bot.isBot && !req.bot.probableBot ? '<span class="bot-badge ai">CONFIRMED BOT</span>' :
+      req.bot.probableBot && !req.bot.isBot ? '<span class="bot-badge hidden">HIDDEN BOT</span>' :
+      req.bot.suspiciousScore >= 50 ? '<span class="bot-badge suspicious">SUSPICIOUS</span>' : ''}
   </h3>
-  ${renderFullRequest(req, false)}
-</div>
-`).join('')}
+
+  <div class="sub">
+    <div><span class="key">BOT NAME:</span> <span class="value">${req.bot.type || 'Unknown'}</span></div>
+    <div><span class="key">OPERATOR:</span> <span class="value">${req.bot.operator || 'Unknown'}</span></div>
+    <div><span class="key">CATEGORY:</span> <span class="value">${req.bot.category || 'Unknown'}</span></div>
+    <div><span class="key">PURPOSE:</span> <span class="value">${req.bot.purpose || 'Unknown'}</span></div>
+    <div>
+      <span class="key">CONFIDENCE:</span>
+      <span class="confidence-meter">
+        <span class="confidence-fill" style="width: ${req.bot.confidence}%"></span>
+      </span>
+      <span class="value">${req.bot.confidence}%</span>
+    </div>
+    ${req.bot.suspiciousScore > 0 ? `
+    <div><span class="key">SUSPICIOUS SCORE:</span> <span class="value" style="color: ${req.bot.suspiciousScore >= 80 ? '#f00' : req.bot.suspiciousScore >= 50 ? '#ff0' : '#0f0'}">${req.bot.suspiciousScore}/100</span></div>
+    ` : ''}
+    ${req.bot.suspiciousReasons && req.bot.suspiciousReasons.length > 0 ? `
+    <div class="suspicious-reasons">
+      <span class="key">DETECTION REASONS:</span><br>
+      ${req.bot.suspiciousReasons.map(r => `• ${r}`).join('<br>')}
+    </div>
+    ` : ''}
+    <div><span class="key">USER AGENT:</span> <span class="value">${req.bot.userAgent}</span></div>
+    <div><span class="key">IP:</span> <span class="value">${req.network.ip}</span></div>
+    <div><span class="key">LOCATION:</span> <span class="value">${req.geo.city || 'Unknown'}, ${req.geo.country || 'Unknown'}</span></div>
+    <div><span class="key">ASN:</span> <span class="value">${req.cf?.asOrganization || 'Unknown'}</span></div>
+  </div>
+
+  <a href="/request/${req.id}" class="detail-link">FULL DETAILS →</a>
+</div>`;
+  }).join('')}
 
 <script>
 function searchPage(term) {
@@ -1641,6 +1662,27 @@ function copyAllData() {
       btn.innerText = 'COPY ALL';
       btn.style.background = '#4CAF50';
     }, 2000);
+  });
+}
+
+function filterBots(type) {
+  const requests = document.querySelectorAll('.request-full');
+  requests.forEach(req => {
+    if (type === 'all') {
+      req.style.display = 'block';
+    } else if (type === 'ai') {
+      req.style.display = req.dataset.category === 'AI' ? 'block' : 'none';
+    } else if (type === 'search') {
+      req.style.display = (req.dataset.category === 'Search' || req.dataset.category === 'Search/AI') ? 'block' : 'none';
+    } else if (type === 'social') {
+      req.style.display = req.dataset.category === 'Social' ? 'block' : 'none';
+    } else if (type === 'seo') {
+      req.style.display = req.dataset.category === 'SEO' ? 'block' : 'none';
+    } else if (type === 'suspicious') {
+      req.style.display = req.classList.contains('bot-suspicious') ? 'block' : 'none';
+    } else if (type === 'hidden') {
+      req.style.display = req.classList.contains('bot-hidden') ? 'block' : 'none';
+    }
   });
 }
 
