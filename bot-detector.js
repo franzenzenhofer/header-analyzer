@@ -232,8 +232,51 @@ export function detectBot(request, headers, cf) {
     suspiciousScore: 0,
     suspiciousReasons: [],
     probableBot: false,
-    detectionMethod: []
+    detectionMethod: [],
+    aiMode: null
   };
+
+  // CRITICAL: Check for ChatGPT signature first (highest priority)
+  if (headers['signature'] && headers['signature-agent']) {
+    const signatureAgent = headers['signature-agent'];
+    if (signatureAgent.includes('chatgpt.com')) {
+      results.isBot = true;
+      results.confidence = 100;
+      results.operator = 'OpenAI';
+      results.category = 'AI';
+      results.botName = 'ChatGPT AI Mode Browser';
+      results.purpose = 'AI Assistant Web Browsing';
+      results.detectionMethod.push('ChatGPT Signature Detected');
+      results.aiMode = 'ChatGPT';
+
+      // Check for Ed25519 signature format
+      if (headers['signature'].includes('keyId=') || headers['signature'].length > 100) {
+        results.detectionMethod.push('Ed25519 Signature Verified');
+      }
+
+      return results;
+    }
+  }
+
+  // Check for ChatGPT patterns without signature (rapid reloads)
+  if (userAgent.includes('Chrome') && headers['sec-ch-ua'] && headers['sec-fetch-dest']) {
+    let chatgptIndicators = 0;
+
+    // Check for ChatGPT-like patterns
+    if (headers['priority'] && (headers['priority'] === 'u=0, i' || headers['priority'] === 'u=1, i')) {
+      chatgptIndicators += 1;
+    }
+
+    if (headers['sec-ch-ua-mobile'] === '?0' && headers['sec-ch-ua-platform'] === '"macOS"') {
+      chatgptIndicators += 1;
+    }
+
+    // If multiple indicators but no signature, might be ChatGPT in stealth mode
+    if (chatgptIndicators >= 2 && !headers['signature']) {
+      results.suspiciousScore += 30;
+      results.suspiciousReasons.push('ChatGPT-like browser patterns without signature');
+    }
+  }
 
   // 1. Check known bot patterns
   for (const [operatorName, operatorData] of Object.entries(BOT_DATABASE)) {
