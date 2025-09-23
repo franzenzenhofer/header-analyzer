@@ -1,10 +1,22 @@
 // Full static HTML with EVERYTHING visible - NO TRUNCATION
-const requestHistory = [];
+// Now with PERSISTENT KV STORAGE - History survives deployments!
 const MAX_HISTORY = 50;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Load history from KV storage
+    let requestHistory = [];
+    try {
+      const stored = await env.HEADER_HISTORY.get('history', { type: 'json' });
+      if (stored && Array.isArray(stored)) {
+        requestHistory = stored;
+      }
+    } catch (error) {
+      console.error('Failed to load history from KV:', error);
+      requestHistory = [];
+    }
 
     // Capture ALL data
     const captureData = () => {
@@ -123,14 +135,14 @@ export default {
 
     // Check if viewing stats page
     if (url.pathname === '/stats') {
-      return new Response(generateStatsPage(), {
+      return new Response(generateStatsPage(requestHistory), {
         headers: { 'Content-Type': 'text/html;charset=UTF-8' }
       });
     }
 
     // Check if viewing bots-only page
     if (url.pathname === '/bots') {
-      return new Response(generateBotsPage(), {
+      return new Response(generateBotsPage(requestHistory), {
         headers: { 'Content-Type': 'text/html;charset=UTF-8' }
       });
     }
@@ -142,6 +154,13 @@ export default {
     requestHistory.unshift(currentRequest);
     if (requestHistory.length > MAX_HISTORY) {
       requestHistory.length = MAX_HISTORY;
+    }
+
+    // Save updated history to KV storage
+    try {
+      await env.HEADER_HISTORY.put('history', JSON.stringify(requestHistory));
+    } catch (error) {
+      console.error('Failed to save history to KV:', error);
     }
 
     // Stats
@@ -375,7 +394,7 @@ ${renderFullRequest(req, true)}
 </html>`;
 }
 
-function generateStatsPage() {
+function generateStatsPage(requestHistory) {
   // Calculate statistics
   const total = requestHistory.length;
   const uniqueIPs = new Set(requestHistory.map(r => r.network.ip));
@@ -544,7 +563,7 @@ Generated: ${new Date().toISOString()} | ${total} requests analyzed
 </html>`;
 }
 
-function generateBotsPage() {
+function generateBotsPage(requestHistory) {
   // Filter only bot requests
   const botRequests = requestHistory.filter(r => r.bot.isBot);
   const total = botRequests.length;
