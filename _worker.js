@@ -1,12 +1,18 @@
 // Full static HTML with EVERYTHING visible - NO TRUNCATION
 // Now with PERSISTENT KV STORAGE - History survives deployments!
+// Now with PAGINATION for unlimited history!
 import { detectBot, generateBotStats, BOT_DATABASE } from './bot-detector.js';
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 500;  // Store up to 500 requests
+const ITEMS_PER_PAGE = 50;  // Display 50 per page
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Parse page parameter for pagination
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const validPage = page > 0 ? page : 1;
 
     // Load history from KV storage
     let requestHistory = [];
@@ -175,7 +181,16 @@ export default {
 
     // Check if viewing bots-only page
     if (url.pathname === '/bots') {
-      return new Response(generateBotsPage(requestHistory), {
+      const botsPage = parseInt(url.searchParams.get('page') || '1');
+      return new Response(generateBotsPage(requestHistory, botsPage), {
+        headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+      });
+    }
+
+    // Check if viewing history page with pagination
+    if (url.pathname === '/history') {
+      const historyPage = parseInt(url.searchParams.get('page') || '1');
+      return new Response(generateHistoryPage(requestHistory, historyPage), {
         headers: { 'Content-Type': 'text/html;charset=UTF-8' }
       });
     }
@@ -196,11 +211,12 @@ export default {
       console.error('Failed to save history to KV:', error);
     }
 
-    // Stats
-    const uniqueIPs = new Set(requestHistory.map(r => r.network.ip));
-    const botCount = requestHistory.filter(r => r.bot.isBot).length;
+    // Stats - only for recent 50 on main page
+    const recentRequests = requestHistory.slice(0, 50);
+    const uniqueIPs = new Set(recentRequests.map(r => r.network.ip));
+    const botCount = recentRequests.filter(r => r.bot.isBot).length;
 
-    // Generate main page with FULL data
+    // Generate main page showing recent 50 only
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -247,14 +263,15 @@ h4 { color: #000; font-size: 12px; margin: 6px 0 3px 0; font-weight: bold; }
 </head>
 <body>
 
-<h1>HEADER ANALYZER - ALL DATA - NO TRUNCATION - ${requestHistory.length} REQUESTS
+<h1>HEADER ANALYZER - RECENT 50 - ${requestHistory.length} TOTAL STORED
 <button onclick="copyAllData()" style="float: right; background: #4CAF50; color: white; padding: 5px 10px; border: none; cursor: pointer; font-size: 14px; margin-left: 10px;">COPY ALL</button>
 </h1>
 
 <div class="nav">
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
 <a href="#current">CURRENT</a>
-<a href="#history">HISTORY</a>
+<a href="#recent">RECENT 50</a>
+<a href="/history" style="color: #f00; font-weight: bold;">ALL HISTORY (${requestHistory.length})</a>
 <a href="/stats">STATS</a>
 <a href="/bots" style="color: #0000ee; font-weight: bold; text-decoration: underline;">BOTS</a>
 <a href="/download" style="color: #0000ee; font-weight: bold; text-decoration: underline;">DOWNLOAD</a>
@@ -262,11 +279,13 @@ h4 { color: #000; font-size: 12px; margin: 6px 0 3px 0; font-weight: bold; }
 <input type="text" id="search" placeholder="Search..." onkeyup="searchPage(this.value)" style="margin-top: 5px;">
 </div>
 
-<h2 id="current">YOUR CURRENT REQUEST #${currentRequest.id.substring(0,8)}</h2>
+<h2 id="current">YOUR CURRENT REQUEST #${currentRequest.id.substring(0,8)}
+<a href="/request/${currentRequest.id}" style="float: right; color: #0000ee; text-decoration: underline; font-size: 12px;">VIEW DETAIL →</a>
+</h2>
 ${renderFullRequest(currentRequest, true)}
 
-<h2 id="history">FULL REQUEST HISTORY (ALL ${requestHistory.length} REQUESTS)</h2>
-${requestHistory.map((req, i) => `
+<h2 id="recent">RECENT 50 REQUESTS (${recentRequests.length} of ${requestHistory.length} total)</h2>
+${recentRequests.map((req, i) => `
 <div class="request-full ${req.bot.isBot ? 'bot' : ''}" id="${req.id}">
   <h3>
     #${i + 1} | ${req.timestamp} | ${req.bot.isBot ? '<span style="background:#f00;color:#fff;padding:2px 5px;">BOT</span>' : req.bot.confidence < 30 ? '<span style="background:#ff0;color:#000;padding:2px 5px;">UNSURE</span>' : '<span style="background:#00f;color:#fff;padding:2px 5px;">HUMAN</span>'} | ${req.network.ip}
@@ -481,6 +500,11 @@ function generateAnalysis(req) {
   // Get comprehensive bot detection data
   const bot = req.bot;
 
+  // Check for signature headers (ChatGPT AI Mode detection)
+  const hasSignature = req.headers['signature'] && req.headers['signature-agent'];
+  const signatureAgent = req.headers['signature-agent'] || '';
+  const signature = req.headers['signature'] || '';
+
   // Start with BOT DETECTION as the PRIMARY ANALYSIS
   let botAnalysisHTML = `
 <h2 style="background: #000; color: #0f0; padding: 8px; margin: 10px 0;">🤖 BOT DETECTION ANALYSIS - PRIMARY REPORT</h2>
@@ -507,6 +531,14 @@ function generateAnalysis(req) {
 <div style="padding: 10px; background: #f8f8f8; margin: 5px 0;">
   <div><strong>USER AGENT:</strong> <code style="background: #fff; padding: 2px; border: 1px solid #ddd;">${ua || '[EMPTY]'}</code></div>
   <div><strong>USER AGENT LENGTH:</strong> ${ua.length} characters ${ua.length < 20 ? '<span style="color: #f00;">(SUSPICIOUS - TOO SHORT)</span>' : ''}</div>
+  ${hasSignature ? `
+  <div style="background: #ff0; padding: 5px; margin: 5px 0; border: 2px solid #f00;">
+    <div><strong>🔐 SIGNATURE DETECTED:</strong> <span style="color: #f00; font-weight: bold;">AI BROWSER SIGNATURE FOUND</span></div>
+    <div><strong>SIGNATURE-AGENT:</strong> <code style="background: #fff; padding: 2px;">${signatureAgent}</code></div>
+    <div><strong>SIGNATURE TYPE:</strong> ${signature.includes('keyId=') ? 'Ed25519' : 'Unknown'} (${signature.length} chars)</div>
+    <div><strong>SIGNATURE VALUE:</strong> <code style="font-size: 10px; word-break: break-all;">${signature.substring(0, 100)}...</code></div>
+  </div>
+  ` : ''}
   <div><strong>DETECTION METHOD:</strong> ${bot.detectionMethod?.join(', ') || 'Pattern Matching'}</div>
   ${bot.suspiciousScore > 0 ? `<div><strong>SUSPICIOUS SCORE:</strong> <span style="color: ${bot.suspiciousScore >= 80 ? '#f00' : bot.suspiciousScore >= 50 ? '#f90' : '#000'}; font-weight: bold;">${bot.suspiciousScore}/100</span></div>` : ''}
 </div>
@@ -1556,7 +1588,99 @@ Generated: ${new Date().toISOString()} | ${total} requests analyzed
 </html>`;
 }
 
-function generateBotsPage(requestHistory) {
+function generateHistoryPage(requestHistory, page = 1) {
+  const totalRequests = requestHistory.length;
+  const totalPages = Math.ceil(totalRequests / ITEMS_PER_PAGE);
+  const currentPage = Math.min(Math.max(1, page), totalPages || 1);
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const pageRequests = requestHistory.slice(startIndex, endIndex);
+
+  // Generate pagination controls
+  const paginationHTML = totalPages > 1 ? `
+  <div class="pagination" style="margin: 10px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; text-align: center;">
+    ${currentPage > 1 ? `<a href="/history?page=${currentPage - 1}" rel="prev" style="padding: 5px 10px; margin: 0 5px; background: #fff; border: 1px solid #000; text-decoration: none;">← PREV</a>` : ''}
+    <span style="margin: 0 10px;">Page ${currentPage} of ${totalPages} (${totalRequests} total requests)</span>
+    ${currentPage < totalPages ? `<a href="/history?page=${currentPage + 1}" rel="next" style="padding: 5px 10px; margin: 0 5px; background: #fff; border: 1px solid #000; text-decoration: none;">NEXT →</a>` : ''}
+    <div style="margin-top: 10px;">
+      ${Array.from({length: Math.min(10, totalPages)}, (_, i) => {
+        const pageNum = i + 1;
+        if (pageNum === currentPage) {
+          return `<span style="padding: 5px 10px; margin: 2px; background: #000; color: #fff;">${pageNum}</span>`;
+        } else {
+          return `<a href="/history?page=${pageNum}" style="padding: 5px 10px; margin: 2px; background: #fff; border: 1px solid #000; text-decoration: none;">${pageNum}</a>`;
+        }
+      }).join('')}
+      ${totalPages > 10 ? `<span style="margin: 0 5px;">...</span><a href="/history?page=${totalPages}" style="padding: 5px 10px; margin: 2px; background: #fff; border: 1px solid #000; text-decoration: none;">${totalPages}</a>` : ''}
+    </div>
+  </div>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Full History - Page ${currentPage} - Header Analyzer</title>
+${currentPage > 1 ? `<link rel="prev" href="/history?page=${currentPage - 1}">` : ''}
+${currentPage < totalPages ? `<link rel="next" href="/history?page=${currentPage + 1}">` : ''}
+<link rel="canonical" href="https://header-analyzer.franzai.com/history${currentPage > 1 ? `?page=${currentPage}` : ''}">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #fff; color: #000; font: 12px/1.4 monospace; padding: 5px; }
+h1 { color: #000; font-size: 18px; margin: 8px 0; border-bottom: 2px solid #000; padding-bottom: 5px; }
+h2 { color: #000; font-size: 14px; margin: 12px 0 6px 0; border-bottom: 1px solid #aaa; }
+.nav { background: #f8f8f8; padding: 8px; border: 1px solid #ddd; margin: 8px 0; }
+.nav a { color: #0000ee; margin-right: 10px; text-decoration: underline; }
+.request-full { margin: 8px 0; padding: 8px; border: 1px solid #ddd; background: #fafafa; }
+.request-full.bot { border-color: #000; background: #fff0f0; }
+.key { color: #000; display: inline-block; min-width: 100px; font-weight: bold; }
+.value { color: #000; word-wrap: break-word; }
+</style>
+</head>
+<body>
+
+<h1>COMPLETE HISTORY - PAGE ${currentPage} OF ${totalPages}</h1>
+
+<div class="nav">
+<a href="/">← BACK TO MAIN</a>
+<a href="/stats">STATISTICS</a>
+<a href="/bots">BOTS ONLY</a>
+<a href="/download">DOWNLOAD ALL</a>
+</div>
+
+${paginationHTML}
+
+<h2>SHOWING REQUESTS ${startIndex + 1} to ${Math.min(endIndex, totalRequests)} of ${totalRequests}</h2>
+
+${pageRequests.map((req, i) => `
+<div class="request-full ${req.bot.isBot || req.bot.probableBot ? 'bot' : ''}" id="${req.id}">
+  <h3>
+    #${startIndex + i + 1} | ${req.timestamp} | ${req.bot.isBot || req.bot.probableBot ? '<span style="background:#f00;color:#fff;padding:2px 5px;">BOT</span>' : '<span style="background:#0f0;color:#fff;padding:2px 5px;">HUMAN</span>'} | ${req.network.ip}
+    <a href="/request/${req.id}" style="float: right; color: #0000ee; text-decoration: underline;">VIEW DETAIL →</a>
+  </h3>
+  <div style="margin: 5px 0;">
+    <span class="key">USER AGENT:</span> <span class="value">${req.bot.userAgent}</span>
+  </div>
+  <div style="margin: 5px 0;">
+    <span class="key">LOCATION:</span> <span class="value">${req.geo.city || 'Unknown'}, ${req.geo.country || 'Unknown'}</span>
+  </div>
+  ${req.bot.operator ? `<div style="margin: 5px 0;">
+    <span class="key">BOT OPERATOR:</span> <span class="value">${req.bot.operator}</span>
+  </div>` : ''}
+  ${req.bot.aiMode ? `<div style="margin: 5px 0; background: #ff0; padding: 2px;">
+    <span class="key">AI MODE:</span> <span class="value" style="font-weight: bold;">${req.bot.aiMode}</span>
+  </div>` : ''}
+</div>
+`).join('')}
+
+${paginationHTML}
+
+</body>
+</html>`;
+}
+
+function generateBotsPage(requestHistory, page = 1) {
   // Get all bot requests (including probable bots)
   const botRequests = requestHistory.filter(r => r.bot.isBot || r.bot.probableBot);
   const suspiciousBots = requestHistory.filter(r => r.bot.suspiciousScore >= 30 && !r.bot.isBot);

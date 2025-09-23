@@ -1,6 +1,6 @@
 {
   "name": "header-analyzer",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "AI Bot Request Header Analyzer - Track and analyze HTTP headers from various AI bots",
   "type": "module",
   "scripts": {
