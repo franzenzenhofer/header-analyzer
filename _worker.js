@@ -1689,6 +1689,13 @@ function generateBotsPage(requestHistory, page = 1) {
   const total = botRequests.length;
   const uniqueIPs = new Set(botRequests.map(r => r.network.ip));
 
+  // Pagination calculations
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const currentPage = Math.min(Math.max(1, page), totalPages || 1);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const pageRequests = botRequests.slice(startIndex, endIndex);
+
   // Get statistics
   const stats = generateBotStats(requestHistory);
 
@@ -1703,51 +1710,62 @@ function generateBotsPage(requestHistory, page = 1) {
     'Suspicious/Hidden': [...hiddenBots, ...suspiciousBots]
   };
 
+  // Generate pagination HTML
+  const paginationHTML = totalPages > 1 ? `
+  <div class="pagination" style="margin: 10px 0; padding: 10px; background: #f8f8f8; border: 1px solid #000; text-align: center;">
+    ${currentPage > 1 ? `<a href="/bots?page=${currentPage - 1}" rel="prev" style="padding: 8px 12px; margin: 0 8px; background: #fff; border: 1px solid #000; color: #0000ff; text-decoration: underline; font-size: 16px;">← PREV</a>` : ''}
+    <span style="margin: 0 12px; color: #000; font-size: 16px;">Page ${currentPage} of ${totalPages} (${total} bots)</span>
+    ${currentPage < totalPages ? `<a href="/bots?page=${currentPage + 1}" rel="next" style="padding: 8px 12px; margin: 0 8px; background: #fff; border: 1px solid #000; color: #0000ff; text-decoration: underline; font-size: 16px;">NEXT →</a>` : ''}
+  </div>` : '';
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bot Detection Specialist - Advanced Analysis</title>
+<title>Bot Detection Specialist - Page ${currentPage} - Header Analyzer</title>
+${currentPage > 1 ? `<link rel="prev" href="/bots?page=${currentPage - 1}">` : ''}
+${currentPage < totalPages ? `<link rel="next" href="/bots?page=${currentPage + 1}">` : ''}
+<link rel="canonical" href="https://header-analyzer.franzai.com/bots${currentPage > 1 ? `?page=${currentPage}` : ''}">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #000; color: #0f0; font: 11px/1.3 monospace; padding: 5px; }
-h1 { color: #0f0; font-size: 16px; margin: 5px 0; border-bottom: 2px solid #0f0; padding-bottom: 3px; }
-h2 { color: #0f0; font-size: 13px; margin: 8px 0 4px 0; border-bottom: 1px solid #0f0; }
-h3 { color: #0f0; font-size: 12px; margin: 5px 0 3px 0; }
-.nav { background: #111; padding: 5px; border: 1px solid #0f0; margin: 5px 0; }
-.nav a, .filter-btn { color: #0ff; margin-right: 8px; text-decoration: underline; cursor: pointer; background: none; border: none; font: inherit; }
-.nav a:hover, .filter-btn:hover { color: #fff; }
-.stats { background: #111; margin: 5px 0; padding: 5px; border: 1px solid #0f0; }
-.stats span { display: inline-block; margin-right: 10px; color: #0f0; }
-.filters { background: #111; padding: 5px; border: 1px solid #0f0; margin: 5px 0; }
-.filter-group { margin: 5px 0; }
-.filter-group label { color: #0ff; margin-right: 5px; }
-.request-full { margin: 5px 0; padding: 5px; border: 1px solid #0f0; background: #111; }
-.request-full.bot-confirmed { border-color: #f00; background: #200; }
-.request-full.bot-suspicious { border-color: #ff0; background: #220; }
-.request-full.bot-hidden { border-color: #f0f; background: #202; }
-.key { color: #0ff; display: inline-block; min-width: 100px; font-weight: bold; }
-.value { color: #fff; }
-.sub { margin-left: 10px; padding-left: 10px; border-left: 1px solid #0f0; }
-.bot-badge { display: inline-block; padding: 2px 5px; margin: 2px; border: 1px solid; }
-.bot-badge.ai { background: #400; border-color: #f00; color: #fff; }
-.bot-badge.search { background: #040; border-color: #0f0; color: #fff; }
-.bot-badge.social { background: #004; border-color: #00f; color: #fff; }
-.bot-badge.seo { background: #440; border-color: #ff0; color: #fff; }
-.bot-badge.suspicious { background: #f0f; border-color: #fff; color: #000; }
-.bot-badge.hidden { background: #f00; border-color: #fff; color: #fff; animation: pulse 1s infinite; }
+body { background: #fff; color: #000; font: 16px/1.4 monospace; padding: 10px; }
+h1 { color: #000; font-size: 24px; margin: 10px 0; border-bottom: 2px solid #000; padding-bottom: 5px; }
+h2 { color: #000; font-size: 20px; margin: 12px 0 6px 0; border-bottom: 1px solid #000; }
+h3 { color: #000; font-size: 18px; margin: 8px 0 4px 0; }
+.nav { background: #f8f8f8; padding: 10px; border: 1px solid #000; margin: 10px 0; }
+.nav a, .filter-btn { color: #0000ff; margin-right: 12px; text-decoration: underline; cursor: pointer; background: none; border: none; font: inherit; font-size: 16px; }
+.nav a:hover, .filter-btn:hover { color: #000080; }
+.stats { background: #f0f0f0; margin: 10px 0; padding: 10px; border: 1px solid #000; }
+.stats span { display: inline-block; margin-right: 12px; color: #000; font-size: 16px; }
+.filters { background: #f8f8f8; padding: 10px; border: 1px solid #000; margin: 10px 0; }
+.filter-group { margin: 10px 0; }
+.filter-group label { color: #000; margin-right: 10px; font-size: 16px; }
+.request-full { margin: 10px 0; padding: 10px; border: 1px solid #000; background: #fafafa; }
+.request-full.bot-confirmed { border-color: #f00; background: #fff0f0; }
+.request-full.bot-suspicious { border-color: #ff8800; background: #fffef0; }
+.request-full.bot-hidden { border-color: #ff00ff; background: #fff0ff; }
+.key { color: #000; display: inline-block; min-width: 150px; font-weight: bold; font-size: 16px; }
+.value { color: #000; font-size: 16px; }
+.sub { margin-left: 15px; padding-left: 15px; border-left: 1px solid #000; }
+.bot-badge { display: inline-block; padding: 4px 8px; margin: 4px; border: 1px solid #000; font-size: 16px; }
+.bot-badge.ai { background: #ffe0e0; border-color: #f00; color: #000; }
+.bot-badge.search { background: #e0ffe0; border-color: #080; color: #000; }
+.bot-badge.social { background: #e0e0ff; border-color: #00f; color: #000; }
+.bot-badge.seo { background: #ffffe0; border-color: #880; color: #000; }
+.bot-badge.suspicious { background: #ffe0ff; border-color: #f0f; color: #000; }
+.bot-badge.hidden { background: #ff0000; border-color: #000; color: #fff; animation: pulse 1s infinite; }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-.confidence-meter { display: inline-block; width: 100px; height: 10px; background: #222; border: 1px solid #0f0; }
+.confidence-meter { display: inline-block; width: 150px; height: 12px; background: #ddd; border: 1px solid #000; }
 .confidence-fill { height: 100%; background: linear-gradient(90deg, #f00, #ff0, #0f0); }
-.suspicious-reasons { background: #200; border: 1px solid #f00; padding: 3px; margin: 3px 0; color: #ff0; font-size: 10px; }
-#search { padding: 4px; background: #000; border: 1px solid #0f0; color: #0f0; width: 200px; }
+.suspicious-reasons { background: #fff0f0; border: 1px solid #f00; padding: 10px; margin: 10px 0; color: #000; font-size: 16px; }
+#search { padding: 6px; background: #fff; border: 1px solid #000; color: #000; width: 250px; font-size: 16px; }
 .highlight { background: #ff0; color: #000; }
 </style>
 </head>
 <body>
 
-<h1>🤖 BOT DETECTION SPECIALIST ANALYSIS - ${total} BOTS DETECTED (${hiddenBots.length} HIDDEN)
+<h1>BOT DETECTION SPECIALIST - ${total} BOTS DETECTED (${hiddenBots.length} HIDDEN)
 </h1>
 
 <div class="nav">
@@ -1784,9 +1802,11 @@ ${Object.entries(categorizedBots).map(([category, bots]) =>
 ).join('')}
 </div>
 
-<h2>BOT REQUESTS</h2>
+${paginationHTML}
+
+<h2>BOT REQUESTS - PAGE ${currentPage}</h2>
 ${total === 0 ? '<div style="padding: 20px; color: #0f0;">No bot requests yet. Waiting for bots...</div>' :
-  botRequests.map((req, i) => {
+  pageRequests.map((req, i) => {
     const botClass = req.bot.probableBot && !req.bot.isBot ? 'bot-hidden' :
                      req.bot.suspiciousScore >= 50 ? 'bot-suspicious' :
                      req.bot.isBot ? 'bot-confirmed' : '';
@@ -1794,7 +1814,7 @@ ${total === 0 ? '<div style="padding: 20px; color: #0f0;">No bot requests yet. W
     return `
 <div class="request-full ${botClass}" id="${req.id}" data-category="${req.bot.category || 'unknown'}" data-operator="${req.bot.operator || 'unknown'}">
   <h3>
-    #${i + 1} | ${req.timestamp}
+    #${startIndex + i + 1} | ${req.timestamp}
     ${req.bot.isBot && !req.bot.probableBot ? '<span class="bot-badge ai">CONFIRMED BOT</span>' :
       req.bot.probableBot && !req.bot.isBot ? '<span class="bot-badge hidden">HIDDEN BOT</span>' :
       req.bot.suspiciousScore >= 50 ? '<span class="bot-badge suspicious">SUSPICIOUS</span>' : ''}
@@ -1830,6 +1850,8 @@ ${total === 0 ? '<div style="padding: 20px; color: #0f0;">No bot requests yet. W
   <a href="/request/${req.id}" class="detail-link">FULL DETAILS →</a>
 </div>`;
   }).join('')}
+
+${paginationHTML}
 
 <script>
 function searchPage(term) {
