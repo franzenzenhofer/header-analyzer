@@ -1,5 +1,17 @@
 // HARDCORE LINT - ZERO TOLERANCE (<50 lines)
 export default {
+  languageOptions: {
+    ecmaVersion: 2024,
+    sourceType: 'module',
+    globals: {
+      console: 'readonly',
+      document: 'readonly',
+      window: 'readonly',
+      fetch: 'readonly',
+      localStorage: 'readonly',
+      crypto: 'readonly'
+    }
+  },
   rules: {
     'max-lines': ['error', { max: 50, skipBlankLines: false }],
     'max-lines-per-function': ['error', { max: 20 }],
@@ -39,9 +51,5 @@ export default {
     'no-magic-numbers': ['error', { ignore: [0, 1, -1] }],
     'no-inline-comments': 'error',
     'no-warning-comments': 'error'
-  },
-  parserOptions: {
-    ecmaVersion: 2024,
-    sourceType: 'module'
   }
 };

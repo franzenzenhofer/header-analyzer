@@ -4,22 +4,28 @@
 Capture and display EVERY piece of HTTP request data with ZERO truncation or hiding. Full transparency, full data, full static HTML.
 
 ## CORE PRINCIPLES
-1. **NO TRUNCATION** - Show everything, always
-2. **NO JAVASCRIPT** - Pure static HTML generation (except JS feature detection)
-3. **MAX 50 LINES** - NO FILE CAN BE BIGGER THAN 50 LINES!!!
-4. **NO HIDING** - Every byte of data visible
-5. **FULL LINKS** - Everything clickable and inspectable
-6. **DRY CODE** - Super modular, reusable functions
-7. **ATOMIC TESTS** - Write tests first, then code
-8. **HARDCORE LINT** - Zero warnings, strict type checking
+1. **MAX 50 LINES** - NO FILE CAN BE BIGGER THAN 50 LINES!!! EVER!!!
+2. **TEST FIRST** - Write tests before code - ALWAYS
+3. **HARDCORE LINT** - Zero warnings, strictest rules
+4. **STRICT TS** - Every strict flag enabled
+5. **DRY CODE** - Super modular, reusable functions
+6. **NO TRUNCATION** - Show everything, always
+7. **FULL LINKS** - Everything clickable and inspectable
+8. **DEPLOY CHECKS** - npm run deploy MUST run ALL checks
 
-## DEPLOYMENT
+## DEPLOYMENT - MANDATORY CHECKS
 ```bash
-# ALWAYS use this for deployment
-npm run deploy
+# npm run deploy MUST run:
+# 1. ./check-file-sizes.sh - NO file over 50 lines
+# 2. npm test - ALL tests must pass
+# 3. npm run lint - ZERO warnings
+# 4. npm run typecheck - STRICT mode
+# 5. ONLY THEN: wrangler deploy
+
+npm run deploy  # This runs ALL checks first
 
 # NEVER use this directly
-wrangler deploy  # NO! Use npm run deploy
+wrangler deploy  # BLOCKED! Use npm run deploy
 ```
 
 ## ARCHITECTURE
