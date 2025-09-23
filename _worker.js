@@ -478,9 +478,118 @@ function generateAnalysis(req) {
   const ua = req.headers['user-agent'] || '';
   const url = req.request.url + req.request.search;
 
-  // Advanced Bot Scoring System (0-100)
-  let botScore = 0;
-  const botIndicators = [];
+  // Get comprehensive bot detection data
+  const bot = req.bot;
+
+  // Start with BOT DETECTION as the PRIMARY ANALYSIS
+  let botAnalysisHTML = `
+<h2 style="background: #000; color: #0f0; padding: 8px; margin: 10px 0;">🤖 BOT DETECTION ANALYSIS - PRIMARY REPORT</h2>
+<div style="border: 2px solid ${bot.isBot || bot.probableBot ? '#f00' : '#0f0'}; padding: 10px; margin: 10px 0; background: ${bot.isBot || bot.probableBot ? '#fff0f0' : '#f0fff0'};">
+
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px;">DETECTION RESULT</h3>
+<div style="padding: 10px; background: #f8f8f8; margin: 5px 0;">
+  <div><strong>STATUS:</strong> ${
+    bot.isBot && !bot.probableBot ? '<span style="background: #f00; color: #fff; padding: 2px 5px;">CONFIRMED BOT</span>' :
+    bot.probableBot && !bot.isBot ? '<span style="background: #f0f; color: #fff; padding: 2px 5px;">HIDDEN/PROBABLE BOT</span>' :
+    bot.suspiciousScore >= 50 ? '<span style="background: #ff0; color: #000; padding: 2px 5px;">SUSPICIOUS - LIKELY BOT</span>' :
+    bot.suspiciousScore >= 30 ? '<span style="background: #ffa; color: #000; padding: 2px 5px;">UNCERTAIN</span>' :
+    '<span style="background: #0f0; color: #fff; padding: 2px 5px;">HUMAN</span>'
+  }</div>
+  <div><strong>CONFIDENCE:</strong> ${bot.confidence}% <span style="display: inline-block; width: 200px; height: 10px; background: #ddd; border: 1px solid #000;"><span style="display: block; width: ${bot.confidence}%; height: 100%; background: ${bot.confidence >= 80 ? '#f00' : bot.confidence >= 60 ? '#ff0' : '#0f0'};"></span></span></div>
+  ${bot.operator ? `<div><strong>OPERATOR:</strong> <span style="font-weight: bold; color: #00f;">${bot.operator}</span></div>` : ''}
+  ${bot.category ? `<div><strong>CATEGORY:</strong> ${bot.category}</div>` : ''}
+  ${bot.purpose ? `<div><strong>PURPOSE:</strong> ${bot.purpose}</div>` : ''}
+  ${bot.botName ? `<div><strong>BOT NAME:</strong> <span style="font-weight: bold;">${bot.botName}</span></div>` : ''}
+  ${bot.version ? `<div><strong>VERSION:</strong> ${bot.version}</div>` : ''}
+</div>
+
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 15px;">HARD DATA - DETECTION EVIDENCE</h3>
+<div style="padding: 10px; background: #f8f8f8; margin: 5px 0;">
+  <div><strong>USER AGENT:</strong> <code style="background: #fff; padding: 2px; border: 1px solid #ddd;">${ua || '[EMPTY]'}</code></div>
+  <div><strong>USER AGENT LENGTH:</strong> ${ua.length} characters ${ua.length < 20 ? '<span style="color: #f00;">(SUSPICIOUS - TOO SHORT)</span>' : ''}</div>
+  <div><strong>DETECTION METHOD:</strong> ${bot.detectionMethod?.join(', ') || 'Pattern Matching'}</div>
+  ${bot.suspiciousScore > 0 ? `<div><strong>SUSPICIOUS SCORE:</strong> <span style="color: ${bot.suspiciousScore >= 80 ? '#f00' : bot.suspiciousScore >= 50 ? '#f90' : '#000'}; font-weight: bold;">${bot.suspiciousScore}/100</span></div>` : ''}
+</div>
+
+${bot.suspiciousReasons && bot.suspiciousReasons.length > 0 ? `
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 15px;">BEHAVIORAL INDICATORS</h3>
+<div style="padding: 10px; background: #fff0f0; border: 1px solid #f00; margin: 5px 0;">
+  ${bot.suspiciousReasons.map(reason => `<div>⚠️ ${reason}</div>`).join('')}
+</div>
+` : ''}
+
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 15px;">HEADER ANALYSIS FOR BOT DETECTION</h3>
+<div style="padding: 10px; background: #f8f8f8; margin: 5px 0;">
+  <div><strong>Accept:</strong> ${req.headers['accept'] || '<span style="color: #f00;">[MISSING]</span>'} ${req.headers['accept'] === '*/*' ? '<span style="color: #f90;">(GENERIC - BOT INDICATOR)</span>' : ''}</div>
+  <div><strong>Accept-Language:</strong> ${req.headers['accept-language'] || '<span style="color: #f00;">[MISSING - BOT INDICATOR]</span>'}</div>
+  <div><strong>Accept-Encoding:</strong> ${req.headers['accept-encoding'] || '<span style="color: #f00;">[MISSING - BOT INDICATOR]</span>'}</div>
+  <div><strong>Cookie:</strong> ${req.headers['cookie'] ? 'Present' : '<span style="color: #f90;">[NO COOKIES - POSSIBLE BOT]</span>'}</div>
+  <div><strong>Referer:</strong> ${req.headers['referer'] || req.headers['referrer'] || '<span style="color: #999;">[DIRECT ACCESS]</span>'}</div>
+  <div><strong>Connection:</strong> ${req.headers['connection'] || '<span style="color: #f90;">[MISSING]</span>'}</div>
+</div>
+
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 15px;">NETWORK ANALYSIS</h3>
+<div style="padding: 10px; background: #f8f8f8; margin: 5px 0;">
+  <div><strong>IP Address:</strong> ${req.network.ip}</div>
+  <div><strong>ASN Organization:</strong> ${req.cf?.asOrganization || 'Unknown'} ${
+    req.cf?.asOrganization && /amazon|google|microsoft|digitalocean|linode|ovh|hetzner|vultr/i.test(req.cf.asOrganization) ?
+    '<span style="color: #f00; font-weight: bold;">(DATA CENTER - BOT INDICATOR)</span>' : ''
+  }</div>
+  <div><strong>Location:</strong> ${req.geo.city || 'Unknown'}, ${req.geo.country || 'Unknown'}</div>
+  <div><strong>Protocol:</strong> ${req.network.protocol || 'Unknown'}</div>
+</div>
+
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 15px;">EXPERT REASONING</h3>
+<div style="padding: 10px; background: #fffef0; border: 1px solid #990; margin: 5px 0;">
+  ${(() => {
+    if (bot.isBot && !bot.probableBot) {
+      return `<strong>CONFIRMED BOT:</strong> User agent matches known bot pattern "${bot.botName}" operated by ${bot.operator || 'unknown operator'}. This is a legitimate, self-identifying bot with purpose: ${bot.purpose || 'unknown purpose'}. Detection confidence is 100% based on pattern matching.`;
+    } else if (bot.probableBot && !bot.isBot) {
+      return `<strong>HIDDEN BOT DETECTED:</strong> This request exhibits ${bot.suspiciousReasons?.length || 0} suspicious behaviors typical of bots trying to appear human. Key indicators: ${bot.suspiciousReasons?.slice(0, 3).join(', ')}. This is likely an automated system not identifying itself properly.`;
+    } else if (bot.suspiciousScore >= 50) {
+      return `<strong>SUSPICIOUS ACTIVITY:</strong> Behavioral analysis shows ${bot.suspiciousScore}% bot probability. While not definitively a bot, the request lacks typical human browser characteristics. Could be: API client, monitoring tool, or poorly configured bot.`;
+    } else if (bot.suspiciousScore >= 30) {
+      return `<strong>UNCERTAIN:</strong> Mixed signals detected. Some bot-like behaviors (score: ${bot.suspiciousScore}) but also human characteristics. Possibly: Developer tools, browser extensions affecting headers, or privacy-focused browser.`;
+    } else {
+      return `<strong>LIKELY HUMAN:</strong> Request shows typical browser characteristics. All expected headers present, normal user agent format, consistent browser behavior. Low bot probability (${bot.suspiciousScore}%).`;
+    }
+  })()}
+</div>
+
+<h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 15px;">RECOMMENDATIONS</h3>
+<div style="padding: 10px; background: #f0f0ff; border: 1px solid #00f; margin: 5px 0;">
+  ${(() => {
+    const recommendations = [];
+    if (bot.isBot || bot.probableBot) {
+      if (bot.category === 'AI') {
+        recommendations.push('• AI bot detected - Consider if you want AI training on your content');
+        recommendations.push('• Add to robots.txt if you want to block: User-agent: ' + (bot.botName || 'bot'));
+      } else if (bot.category === 'SEO') {
+        recommendations.push('• SEO analysis bot - Generally harmless but can consume resources');
+        recommendations.push('• Consider rate limiting if seeing excessive requests');
+      } else if (bot.category === 'Search' || bot.category === 'Search/AI') {
+        recommendations.push('• Search engine bot - Essential for SEO, do not block');
+        recommendations.push('• Ensure important content is accessible');
+      } else if (bot.probableBot && !bot.isBot) {
+        recommendations.push('• Hidden bot detected - Potentially malicious scraper');
+        recommendations.push('• Consider implementing CAPTCHA or rate limiting');
+        recommendations.push('• Monitor for excessive requests from this IP');
+      }
+    } else {
+      recommendations.push('• Appears to be legitimate human traffic');
+      recommendations.push('• No immediate action required');
+    }
+    return recommendations.join('<br>');
+  })()}
+</div>
+
+</div>
+`;
+
+  // Continue with other analysis sections but BOT DETECTION comes FIRST
+  // Advanced Bot Scoring System (0-100) - for backward compatibility
+  let botScore = bot.suspiciousScore || 0;
+  const botIndicators = bot.suspiciousReasons || [];
 
   // Check browser inconsistencies
   if (ua.includes('Chrome') && !req.headers['sec-ch-ua']) {
@@ -1071,9 +1180,9 @@ function generateAnalysis(req) {
     detectiveSummary.push(`[SECURITY ALERT] Suspicious patterns detected - possible attack attempt`);
   }
 
-  // Generate enhanced HTML
-  return `
-<h2 style="color: #000; margin-top: 20px; border-top: 2px solid #000; padding-top: 10px;">DETECTIVE ANALYSIS</h2>
+  // Generate enhanced HTML - BOT DETECTION COMES FIRST
+  return botAnalysisHTML + `
+<h2 style="color: #000; margin-top: 20px; border-top: 2px solid #000; padding-top: 10px;">ADDITIONAL DETECTIVE ANALYSIS</h2>
 <div style="background: #f8f8f8; border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
 
   ${detectiveSummary.length > 0 ? `
