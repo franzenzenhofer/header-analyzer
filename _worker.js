@@ -27,7 +27,7 @@ export default {
 
       const cf = request.cf || {};
       const userAgent = headers['user-agent'] || '';
-      const isBot = /bot|crawler|spider|scraper|curl|wget|postman|anthropic|claude|gpt/i.test(userAgent);
+      const isBot = /bot|crawler|spider|scraper|curl|wget|postman|anthropic|claude|ClaudeBot|claude-web|anthropic-ai|openai|gpt|GPTBot|ChatGPT-User|OAI-SearchBot|gemini|Google-Extended|Gemini-Ai|Gemini-Deep-Research|perplexity|PerplexityBot|Perplexity-User|MistralAI-User|bard|BingBot|facebook|twitter|slack|linkedin|whatsapp|telegram|discord|python|ruby|java|go|lighthouse|gtmetrix|pingdom|uptimerobot|statuscake|semrush|ahrefs|moz|majestic|dotbot|seznambot|yandex|baidu|duckduck|archive\.org|facebookexternalhit|twitterbot|slackbot|linkedinbot|whatsappbot|telegrambot|discordbot/i.test(userAgent);
 
       // Parse cookies
       const cookies = {};
@@ -105,7 +105,60 @@ export default {
         bot: {
           isBot: isBot,
           userAgent: userAgent,
-          type: isBot ? userAgent.match(/googlebot|bingbot|facebookexternalhit|twitterbot|slackbot|linkedinbot|anthropic|claude|gpt|openai/i)?.[0] || 'Generic Bot' : 'Human'
+          type: isBot ? (() => {
+            // AI Bots
+            if (/GPTBot/i.test(userAgent)) return 'OpenAI GPTBot (Training)';
+            if (/ChatGPT-User/i.test(userAgent)) return 'ChatGPT Browser';
+            if (/OAI-SearchBot/i.test(userAgent)) return 'OpenAI SearchBot';
+            if (/ClaudeBot/i.test(userAgent)) return 'Claude Bot (Citations)';
+            if (/claude-web/i.test(userAgent)) return 'Claude Web Crawler';
+            if (/anthropic-ai/i.test(userAgent)) return 'Anthropic AI (Training)';
+            if (/anthropic|claude/i.test(userAgent)) return 'Anthropic/Claude';
+            if (/Google-Extended/i.test(userAgent)) return 'Google Gemini';
+            if (/Gemini-Ai/i.test(userAgent)) return 'Gemini AI';
+            if (/Gemini-Deep-Research/i.test(userAgent)) return 'Gemini Deep Research';
+            if (/gemini/i.test(userAgent)) return 'Google Gemini';
+            if (/PerplexityBot/i.test(userAgent)) return 'Perplexity Index Bot';
+            if (/Perplexity-User/i.test(userAgent)) return 'Perplexity User';
+            if (/MistralAI-User/i.test(userAgent)) return 'Mistral AI';
+            if (/bard/i.test(userAgent)) return 'Google Bard';
+            // Search Engine Bots
+            if (/googlebot/i.test(userAgent)) return 'Googlebot';
+            if (/bingbot/i.test(userAgent)) return 'BingBot';
+            if (/yandex/i.test(userAgent)) return 'YandexBot';
+            if (/baidu/i.test(userAgent)) return 'BaiduBot';
+            if (/duckduck/i.test(userAgent)) return 'DuckDuckBot';
+            // Social Media Bots
+            if (/facebookexternalhit/i.test(userAgent)) return 'Facebook';
+            if (/twitterbot/i.test(userAgent)) return 'Twitter/X';
+            if (/slackbot/i.test(userAgent)) return 'Slack';
+            if (/linkedinbot/i.test(userAgent)) return 'LinkedIn';
+            if (/whatsappbot|whatsapp/i.test(userAgent)) return 'WhatsApp';
+            if (/telegrambot|telegram/i.test(userAgent)) return 'Telegram';
+            if (/discordbot|discord/i.test(userAgent)) return 'Discord';
+            // Tools & Crawlers
+            if (/curl/i.test(userAgent)) return 'curl';
+            if (/wget/i.test(userAgent)) return 'wget';
+            if (/postman/i.test(userAgent)) return 'Postman';
+            if (/python/i.test(userAgent)) return 'Python';
+            if (/ruby/i.test(userAgent)) return 'Ruby';
+            if (/java/i.test(userAgent)) return 'Java';
+            if (/go-http/i.test(userAgent)) return 'Go';
+            // SEO Bots
+            if (/semrush/i.test(userAgent)) return 'SEMrush';
+            if (/ahrefs/i.test(userAgent)) return 'Ahrefs';
+            if (/moz/i.test(userAgent)) return 'Moz';
+            if (/majestic/i.test(userAgent)) return 'Majestic';
+            // Monitoring
+            if (/lighthouse/i.test(userAgent)) return 'Google Lighthouse';
+            if (/gtmetrix/i.test(userAgent)) return 'GTmetrix';
+            if (/pingdom/i.test(userAgent)) return 'Pingdom';
+            if (/uptimerobot/i.test(userAgent)) return 'UptimeRobot';
+            if (/statuscake/i.test(userAgent)) return 'StatusCake';
+            // Generic
+            if (/bot|crawler|spider/i.test(userAgent)) return 'Generic Bot';
+            return 'Unknown Bot';
+          })() : 'Human'
         },
 
         security: {
