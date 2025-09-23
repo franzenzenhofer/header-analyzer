@@ -184,25 +184,15 @@ h4 { color: #000; font-size: 12px; margin: 8px 0 4px 0; font-weight: bold; }
 <h1>HEADER ANALYZER - ALL DATA - NO TRUNCATION - ${requestHistory.length} REQUESTS</h1>
 
 <div class="nav">
-<a href="#current">CURRENT</a>
-<a href="#stats">STATS</a>
-<a href="#history">HISTORY</a>
+<a href="#current">CURRENT REQUEST</a>
+<a href="#history">REQUEST HISTORY</a>
+<a href="/stats">STATISTICS</a>
 <a href="/bots" style="color: #800; font-weight: bold;">BOTS ONLY</a>
-<a href="/stats">FULL STATISTICS</a>
 <input type="text" id="search" placeholder="Search in page (Ctrl+F)..." onkeyup="searchPage(this.value)">
 </div>
 
 <h2 id="current">YOUR CURRENT REQUEST #${currentRequest.id.substring(0,8)}</h2>
 ${renderFullRequest(currentRequest, true)}
-
-<h2 id="stats">STATISTICS</h2>
-<div class="stats">
-<span>TOTAL: ${requestHistory.length}</span>
-<span>UNIQUE IPs: ${uniqueIPs.size}</span>
-<span>BOTS: ${botCount}</span>
-<span>HUMANS: ${requestHistory.length - botCount}</span>
-<span>BOT RATE: ${requestHistory.length > 0 ? Math.round(botCount/requestHistory.length*100) : 0}%</span>
-</div>
 
 <h2 id="history">FULL REQUEST HISTORY (ALL ${requestHistory.length} REQUESTS)</h2>
 ${requestHistory.map((req, i) => `
@@ -465,7 +455,7 @@ pre { color: #000; }
 <h1>HEADER ANALYZER - STATISTICS</h1>
 
 <div class="nav">
-<a href="/">← BACK TO REQUESTS</a>
+<a href="/">← BACK TO ALL</a>
 <a href="#summary">SUMMARY</a>
 <a href="#countries">COUNTRIES</a>
 <a href="#bots">BOTS</a>
@@ -602,13 +592,11 @@ h4 { color: #ff0; font-size: 10px; margin: 4px 0 2px 0; }
 
 <div class="nav">
 <a href="/">← BACK TO ALL</a>
-<a href="#stats">BOT STATS</a>
-<a href="#bots">BOT REQUESTS</a>
-<a href="/stats">📊 FULL STATISTICS</a>
+<a href="/stats">STATISTICS</a>
 <input type="text" id="search" placeholder="Search in bots..." onkeyup="searchPage(this.value)">
 </div>
 
-<h2 id="stats">▼ BOT STATISTICS</h2>
+<h2>BOT STATISTICS AND REQUESTS (${total} BOTS)</h2>
 <div class="stats">
 <span>TOTAL BOTS: ${total}</span>
 <span>UNIQUE BOT IPs: ${uniqueIPs.size}</span>
@@ -617,7 +605,6 @@ ${Object.entries(botTypes).map(([type, count]) =>
 ).join('')}
 </div>
 
-<h2 id="bots">ALL BOT REQUESTS (${total} BOTS)</h2>
 ${total === 0 ? '<div style="padding: 20px; color: #666;">No bot requests yet</div>' :
   botRequests.map((req, i) => `
 <div class="request-full" id="${req.id}">
