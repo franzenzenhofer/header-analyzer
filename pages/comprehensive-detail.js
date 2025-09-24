@@ -3,7 +3,7 @@ import { renderHTMLStart, renderHTMLEnd } from '../components/html-head.js';
 import { renderNavigation } from '../components/navigation.js';
 import { renderBotLabel } from '../components/bot-label.js';
 import { renderBotAnalysis } from '../renderers/bot-renderer.js';
-import { renderFixedJSDetection } from '../js-detection-fixed.js';
+import { renderJS78Detection } from '../js-detection-78-features.js';
 import { renderEmptyJSDetection } from '../components/js-empty.js';
 import { renderDetectiveAnalysis } from '../renderers/detective-renderer.js';
 import { renderFullRequest } from '../renderers/request-renderer.js';
@@ -34,7 +34,7 @@ function renderRequestHeader(req) {
 
 function renderJSSection(req) {
   return (req.jsData && Object.keys(req.jsData).length > 0) ?
-    renderFixedJSDetection(req.id, req.jsData) :
+    renderJS78Detection(req.id, req.jsData) :
     renderEmptyJSDetection();
 }
 

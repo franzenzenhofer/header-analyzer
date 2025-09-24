@@ -2,7 +2,7 @@
 import { renderHTMLStart, renderHTMLEnd } from '../components/html-head.js';
 import { renderNavigation } from '../components/navigation.js';
 import { renderBotLabel } from '../components/bot-label.js';
-import { renderFixedJSDetection } from '../js-detection-fixed.js';
+import { renderJS78Detection } from '../js-detection-78-features.js';
 import { renderBotAnalysis } from '../renderers/bot-renderer.js';
 import { renderFullRequest } from '../renderers/request-renderer.js';
 import { CONSTANTS } from '../config/constants.js';
@@ -14,7 +14,7 @@ export function generateMainPage(currentRequest, requestHistory) {
     renderCurrentRequestSummary(currentRequest) +
     renderBotAnalysis(currentRequest) +
     renderFullRequest(currentRequest, true) +
-    renderFixedJSDetection(currentRequest.id, currentRequest.jsData) +
+    renderJS78Detection(currentRequest.id, currentRequest.jsData) +
     renderHTMLEnd();
 }
 
