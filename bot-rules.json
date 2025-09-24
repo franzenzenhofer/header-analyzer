@@ -1,0 +1,444 @@
+{
+  "bots": [
+    {
+      "id": "googlebot-desktop",
+      "operator": "Google",
+      "botName": "Googlebot Desktop",
+      "type": "Search Engine",
+      "patterns": ["compatible; Googlebot/2.1", "Googlebot/2.1"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google's main search crawler for desktop content indexing"
+    },
+    {
+      "id": "googlebot-smartphone",
+      "operator": "Google",
+      "botName": "Googlebot Smartphone",
+      "type": "Search Engine",
+      "patterns": ["Android", "Mobile Safari", "compatible; Googlebot/2.1"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google's mobile search crawler for smartphone content"
+    },
+    {
+      "id": "googlebot-image",
+      "operator": "Google",
+      "botName": "Googlebot-Image",
+      "type": "Search Engine",
+      "patterns": ["Googlebot-Image/", "compatible; Googlebot-Image"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google Images crawler for image search indexing"
+    },
+    {
+      "id": "googlebot-video",
+      "operator": "Google",
+      "botName": "Googlebot-Video",
+      "type": "Search Engine",
+      "patterns": ["Googlebot-Video/"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google Video crawler for video search results"
+    },
+    {
+      "id": "googlebot-news",
+      "operator": "Google",
+      "botName": "Googlebot-News",
+      "type": "Search Engine",
+      "patterns": ["Googlebot-News"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google News crawler for news content aggregation"
+    },
+    {
+      "id": "google-inspection-tool",
+      "operator": "Google",
+      "botName": "Google-InspectionTool",
+      "type": "Search Testing",
+      "patterns": ["Google-InspectionTool/", "compatible; Google-InspectionTool"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Search Console URL inspection tool for testing site accessibility"
+    },
+    {
+      "id": "googleother",
+      "operator": "Google",
+      "botName": "GoogleOther",
+      "type": "Generic Crawler",
+      "patterns": ["GoogleOther", "compatible; GoogleOther"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Generic Google crawler for miscellaneous crawling tasks"
+    },
+    {
+      "id": "google-extended",
+      "operator": "Google",
+      "botName": "Google-Extended",
+      "type": "AI Training",
+      "patterns": ["Google-Extended/", "compatible; Google-Extended"],
+      "url": "https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers",
+      "detectionReason": "AI training crawler for Google's Bard and generative AI models"
+    },
+    {
+      "id": "storebot-google",
+      "operator": "Google",
+      "botName": "Storebot-Google",
+      "type": "Shopping",
+      "patterns": ["Storebot-Google/"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google Shopping crawler for product information and pricing"
+    },
+    {
+      "id": "adsbot-google",
+      "operator": "Google",
+      "botName": "AdsBot-Google",
+      "type": "Ads Quality",
+      "patterns": ["AdsBot-Google/", "AdsBot-Google-Mobile"],
+      "url": "https://www.google.com/bot.html",
+      "detectionReason": "Google Ads quality checker for landing page validation"
+    },
+    {
+      "id": "openai-gptbot",
+      "operator": "OpenAI",
+      "botName": "GPTBot",
+      "type": "AI Training",
+      "patterns": ["GPTBot/", "compatible; GPTBot"],
+      "url": "https://openai.com/gptbot",
+      "detectionReason": "AI training crawler for OpenAI's GPT language models"
+    },
+    {
+      "id": "openai-searchbot",
+      "operator": "OpenAI",
+      "botName": "OAI-SearchBot",
+      "type": "AI Search",
+      "patterns": ["OAI-SearchBot/", "compatible; OAI-SearchBot"],
+      "url": "https://openai.com/searchbot",
+      "detectionReason": "AI search crawler for OpenAI's ChatGPT search functionality"
+    },
+    {
+      "id": "openai-chatgpt-user",
+      "operator": "OpenAI",
+      "botName": "ChatGPT-User",
+      "type": "AI Assistant",
+      "patterns": ["ChatGPT-User/", "ChatGPT/"],
+      "url": "https://openai.com",
+      "detectionReason": "ChatGPT web browsing tool for user-requested content retrieval"
+    },
+    {
+      "id": "anthropic-claude",
+      "operator": "Anthropic",
+      "botName": "ClaudeBot",
+      "type": "AI Training",
+      "patterns": ["ClaudeBot/", "compatible; ClaudeBot", "claudebot@anthropic.com"],
+      "url": "claudebot@anthropic.com",
+      "detectionReason": "AI training crawler for Anthropic's Claude language models"
+    },
+    {
+      "id": "anthropic-claude-web",
+      "operator": "Anthropic",
+      "botName": "Claude-Web",
+      "type": "AI Assistant",
+      "patterns": ["Claude-Web/", "claude-web", "Claude-User"],
+      "url": "https://anthropic.com",
+      "detectionReason": "Claude web browsing tool for user-requested content analysis"
+    },
+    {
+      "id": "perplexity-bot",
+      "operator": "Perplexity AI",
+      "botName": "PerplexityBot",
+      "type": "AI Search",
+      "patterns": ["PerplexityBot/", "compatible; PerplexityBot"],
+      "url": "https://perplexity.ai/bot",
+      "detectionReason": "AI search crawler for Perplexity's real-time information retrieval"
+    },
+    {
+      "id": "perplexity-user",
+      "operator": "Perplexity AI",
+      "botName": "Perplexity-User",
+      "type": "AI Assistant",
+      "patterns": ["Perplexity-User/", "compatible; Perplexity-User"],
+      "url": "https://perplexity.ai/bot",
+      "detectionReason": "Perplexity AI assistant for user-requested web content analysis"
+    },
+    {
+      "id": "bing-bot",
+      "operator": "Microsoft",
+      "botName": "Bingbot",
+      "type": "Search Engine",
+      "patterns": ["bingbot/", "msnbot/", "BingPreview/", "compatible; bingbot"],
+      "url": "https://www.bing.com/bingbot.htm",
+      "detectionReason": "Microsoft Bing search crawler for web content indexing"
+    },
+    {
+      "id": "duckduckgo",
+      "operator": "DuckDuckGo",
+      "botName": "DuckDuckBot",
+      "type": "Search Engine",
+      "patterns": ["DuckDuckBot/", "DuckDuckGo/", "compatible; DuckDuckBot"],
+      "url": "https://duckduckgo.com/duckduckbot",
+      "detectionReason": "DuckDuckGo privacy-focused search crawler for web indexing"
+    },
+    {
+      "id": "meta-external",
+      "operator": "Meta",
+      "botName": "Meta-ExternalAgent",
+      "type": "AI Training",
+      "patterns": ["Meta-ExternalAgent/", "facebookexternalhit/", "FacebookBot"],
+      "url": "https://developers.facebook.com/docs/sharing/webmasters/crawler",
+      "detectionReason": "AI training crawler for Meta's Llama and social media models"
+    },
+    {
+      "id": "amazon-bot",
+      "operator": "Amazon",
+      "botName": "Amazonbot",
+      "type": "AI/Commerce",
+      "patterns": ["Amazonbot/", "compatible; Amazonbot"],
+      "url": "https://developer.amazon.com/amazonbot",
+      "detectionReason": "AI training crawler for Amazon's Alexa and machine learning models"
+    },
+    {
+      "id": "bytedance",
+      "operator": "ByteDance",
+      "botName": "Bytespider",
+      "type": "AI Training",
+      "patterns": ["Bytespider", "ByteDance"],
+      "url": "https://bytedance.com",
+      "detectionReason": "AI training crawler for ByteDance's TikTok and recommendation algorithms"
+    },
+    {
+      "id": "apple-bot",
+      "operator": "Apple",
+      "botName": "Applebot",
+      "type": "Search Engine",
+      "patterns": ["Applebot/", "compatible; Applebot"],
+      "url": "https://support.apple.com/en-us/119829",
+      "detectionReason": "Apple Siri search crawler for web content and knowledge indexing"
+    },
+    {
+      "id": "apple-bot-extended",
+      "operator": "Apple",
+      "botName": "Applebot-Extended",
+      "type": "AI Training",
+      "patterns": ["Applebot-Extended/"],
+      "url": "https://support.apple.com/en-us/119829",
+      "detectionReason": "AI training crawler for Apple's machine learning and AI models"
+    },
+    {
+      "id": "yandex",
+      "operator": "Yandex",
+      "botName": "YandexBot",
+      "type": "Search Engine",
+      "patterns": ["YandexBot/", "YandexImages/", "YandexVideo/", "YandexMedia/"],
+      "url": "https://yandex.com/support/webmaster/robot-workings/check-yandex-robots.html",
+      "detectionReason": "Yandex search crawler for Russian and CIS region web indexing"
+    },
+    {
+      "id": "baidu",
+      "operator": "Baidu",
+      "botName": "Baiduspider",
+      "type": "Search Engine",
+      "patterns": ["Baiduspider/", "Baiduspider-image", "Baiduspider-video", "Baiduspider-news"],
+      "url": "https://www.baidu.com/search/robots_english.html",
+      "detectionReason": "Baidu search crawler for Chinese web content and multimedia indexing"
+    },
+    {
+      "id": "semrush",
+      "operator": "SEMrush",
+      "botName": "SEMrushBot",
+      "type": "SEO Tool",
+      "patterns": ["SemrushBot/", "SemrushBot-SA", "SemrushBot-BA", "SemrushBot-BM"],
+      "url": "https://www.semrush.com/bot/",
+      "detectionReason": "SEO analysis tool for keyword research and competitive intelligence"
+    },
+    {
+      "id": "ahrefs",
+      "operator": "Ahrefs",
+      "botName": "AhrefsBot",
+      "type": "SEO Tool",
+      "patterns": ["AhrefsBot/", "AhrefsSiteAudit/"],
+      "url": "https://ahrefs.com/robot",
+      "detectionReason": "SEO analysis tool for backlink research and site auditing"
+    },
+    {
+      "id": "screaming-frog",
+      "operator": "Screaming Frog",
+      "botName": "Screaming Frog SEO Spider",
+      "type": "SEO Tool",
+      "patterns": ["Screaming Frog SEO Spider"],
+      "url": "https://www.screamingfrog.co.uk/seo-spider/",
+      "detectionReason": "SEO analysis tool for technical site auditing and crawling"
+    },
+    {
+      "id": "slack",
+      "operator": "Slack",
+      "botName": "Slackbot",
+      "type": "Social/Preview",
+      "patterns": ["Slackbot-LinkExpanding", "Slackbot-ImgProxy", "Slack-ImgProxy", "Slackbot/"],
+      "url": "https://api.slack.com/robots",
+      "detectionReason": "Link preview generator for Slack team communication platform"
+    },
+    {
+      "id": "discord",
+      "operator": "Discord",
+      "botName": "Discordbot",
+      "type": "Social/Preview",
+      "patterns": ["Discordbot/", "Mozilla/5.0 (compatible; Discordbot"],
+      "url": "https://discord.com/developers/docs/resources/user#user-object",
+      "detectionReason": "Link preview generator for Discord gaming and community platform"
+    },
+    {
+      "id": "telegram",
+      "operator": "Telegram",
+      "botName": "TelegramBot",
+      "type": "Social/Preview",
+      "patterns": ["TelegramBot", "Telegram-Bot"],
+      "url": "https://core.telegram.org/bots",
+      "detectionReason": "Link preview generator for Telegram messaging platform"
+    },
+    {
+      "id": "whatsapp",
+      "operator": "WhatsApp",
+      "botName": "WhatsApp",
+      "type": "Social/Preview",
+      "patterns": ["WhatsApp/", "WhatsApp Bot", "WhatsAppBot"],
+      "url": "https://developers.facebook.com/docs/whatsapp",
+      "detectionReason": "Link preview generator for WhatsApp messaging platform"
+    },
+    {
+      "id": "twitter",
+      "operator": "Twitter/X",
+      "botName": "Twitterbot",
+      "type": "Social/Preview",
+      "patterns": ["Twitterbot/", "X-Bot", "compatible; Twitterbot"],
+      "url": "https://developer.twitter.com/en/docs/twitter-for-websites/cards/guides/getting-started",
+      "detectionReason": "Link preview generator for Twitter/X social media platform"
+    },
+    {
+      "id": "linkedin",
+      "operator": "LinkedIn",
+      "botName": "LinkedInBot",
+      "type": "Social/Preview",
+      "patterns": ["LinkedInBot/", "LinkedIn/"],
+      "url": "https://www.linkedin.com",
+      "detectionReason": "Link preview generator for LinkedIn professional networking platform"
+    },
+    {
+      "id": "pinterest",
+      "operator": "Pinterest",
+      "botName": "Pinterestbot",
+      "type": "Social/Preview",
+      "patterns": ["Pinterest/", "Pinterestbot/", "compatible; Pinterestbot"],
+      "url": "https://help.pinterest.com/en/business/article/pinterest-crawler",
+      "detectionReason": "Link preview generator for Pinterest visual discovery platform"
+    },
+    {
+      "id": "curl",
+      "operator": "cURL",
+      "botName": "cURL",
+      "type": "Developer Tool",
+      "patterns": ["curl/"],
+      "url": "https://curl.se/",
+      "detectionReason": "Command-line tool for transferring data and testing HTTP requests"
+    },
+    {
+      "id": "wget",
+      "operator": "GNU Wget",
+      "botName": "Wget",
+      "type": "Developer Tool",
+      "patterns": ["Wget/"],
+      "url": "https://www.gnu.org/software/wget/",
+      "detectionReason": "Command-line tool for downloading files and mirroring websites"
+    },
+    {
+      "id": "python-requests",
+      "operator": "Python",
+      "botName": "Python-Requests",
+      "type": "Developer Tool",
+      "patterns": ["python-requests/", "Python-urllib/", "python-httpx/"],
+      "url": "https://pypi.org/project/requests/",
+      "detectionReason": "Command-line tool for Python HTTP requests and web scraping"
+    },
+    {
+      "id": "postman",
+      "operator": "Postman",
+      "botName": "PostmanRuntime",
+      "type": "Developer Tool",
+      "patterns": ["PostmanRuntime/"],
+      "url": "https://www.postman.com/",
+      "detectionReason": "Command-line tool for API testing and development workflows"
+    },
+    {
+      "id": "insomnia",
+      "operator": "Kong",
+      "botName": "Insomnia",
+      "type": "Developer Tool",
+      "patterns": ["insomnia/"],
+      "url": "https://insomnia.rest/",
+      "detectionReason": "Command-line tool for REST API testing and GraphQL queries"
+    },
+    {
+      "id": "go-http",
+      "operator": "Go",
+      "botName": "Go-http-client",
+      "type": "Developer Tool",
+      "patterns": ["Go-http-client/"],
+      "url": "https://golang.org/",
+      "detectionReason": "Command-line tool for Go programming language HTTP requests"
+    },
+    {
+      "id": "java",
+      "operator": "Java",
+      "botName": "Java HTTP Client",
+      "type": "Developer Tool",
+      "patterns": ["Java/", "Apache-HttpClient/", "okhttp/"],
+      "url": "https://openjdk.java.net/",
+      "detectionReason": "Command-line tool for Java programming language HTTP operations"
+    },
+    {
+      "id": "node-fetch",
+      "operator": "Node.js",
+      "botName": "Node-Fetch",
+      "type": "Developer Tool",
+      "patterns": ["node-fetch/", "axios/"],
+      "url": "https://nodejs.org/",
+      "detectionReason": "Command-line tool for Node.js HTTP requests and web automation"
+    },
+    {
+      "id": "ruby",
+      "operator": "Ruby",
+      "botName": "Ruby HTTP Client",
+      "type": "Developer Tool",
+      "patterns": ["Ruby", "rest-client/"],
+      "url": "https://www.ruby-lang.org/",
+      "detectionReason": "Command-line tool for Ruby programming language HTTP requests"
+    },
+    {
+      "id": "mistral",
+      "operator": "Mistral AI",
+      "botName": "MistralAI",
+      "type": "AI Training",
+      "patterns": ["MistralAI", "Mistral-Bot"],
+      "url": "https://mistral.ai/",
+      "detectionReason": "AI training crawler for Mistral AI language models"
+    },
+    {
+      "id": "cohere",
+      "operator": "Cohere",
+      "botName": "Cohere-AI",
+      "type": "AI Training",
+      "patterns": ["Cohere-Ai", "CohereBot"],
+      "url": "https://cohere.ai/",
+      "detectionReason": "AI training crawler for Cohere language and embedding models"
+    },
+    {
+      "id": "huggingface",
+      "operator": "HuggingFace",
+      "botName": "HuggingFace-Bot",
+      "type": "AI Training",
+      "patterns": ["HuggingFace-Bot", "HuggingFaceBot"],
+      "url": "https://huggingface.co/",
+      "detectionReason": "AI training crawler for HuggingFace open-source machine learning models"
+    },
+    {
+      "id": "generic-bot",
+      "operator": "Unknown",
+      "botName": "Generic Bot",
+      "type": "Unknown Bot",
+      "patterns": ["bot", "spider", "crawler", "scraper", "fetcher"],
+      "detectionReason": "Generic bot pattern for unidentified automated web crawlers"
+    }
+  ]
+}
