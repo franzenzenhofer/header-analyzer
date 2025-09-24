@@ -2,7 +2,7 @@
 import { getSharedCSS } from '../shared-css.js';
 import { renderFullRequest } from '../renderers/request-renderer.js';
 import { renderBotAnalysis } from '../renderers/bot-renderer.js';
-import { renderComprehensiveJS } from '../js-detection-comprehensive.js';
+import { renderFixedJSDetection } from '../js-detection-fixed.js';
 
 export function generateDetailPage(request) {
   const botLabel = request.bot.isBot ?
@@ -34,7 +34,7 @@ export function generateDetailPage(request) {
   ${botLabel}
 </div>
 
-${request.jsData ? renderComprehensiveJS(request.id, request.jsData) : ''}
+${request.jsData ? renderFixedJSDetection(request.id, request.jsData) : ''}
 ${renderBotAnalysis(request)}
 ${renderFullRequest(request, true)}
 
